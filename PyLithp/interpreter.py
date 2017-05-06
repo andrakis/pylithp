@@ -1,6 +1,5 @@
 import re
 from lithptypes import *
-from builtins   import Builtins
 
 class Interpreter:
 
@@ -49,18 +48,10 @@ class Interpreter:
 	def get_param_value(self, chain, p):
 		if p == None:
 			return None
-		if isinstance(p, Atom):
-			return p
 		elif isinstance(p, FunctionCall):
 			return self._do_functioncall(chain, p)
 		elif isinstance(p, Literal):
 			return p.value
-		elif isinstance(p, VariableReference):
-			return p
-		elif isinstance(p, OpChain):
-			return p
-		elif isinstance(p, FunctionDefinition):
-			return p
 		else:
 			return p
 
@@ -123,7 +114,7 @@ class Interpreter:
 			call_chain = OpChain(parent, fndef.body)
 			if arity == "*":
 				params = [params]
-			for index, name in enumerate(fndef.params):
+			for index, name in enumerate(fndef.args):
 				call_chain.closure.set_immediate(name, params[index])
 			call_chain.function_entry = fndef.readable_name
 			val = self.run(call_chain)

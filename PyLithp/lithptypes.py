@@ -145,6 +145,7 @@ class FunctionDefinition(LithpOpChainMember):
 		self.body = body
 		self.arity = "?"
 		self.readable_name = "?"
+		self.scoped = False
 
 class FunctionDefinitionNative(LithpOpChainMember):
 	def __init__(self, name, args, body):
@@ -156,6 +157,8 @@ class FunctionDefinitionNative(LithpOpChainMember):
 			arity = match.group(2)
 			if arity != "*" and arity != None:
 				arity = int(arity)
+		else:
+			name = readable_name = name + "/" + str(len(args))
 		self.name = name
 		self.args = args
 		self.body = body
