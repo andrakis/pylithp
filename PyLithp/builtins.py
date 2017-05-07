@@ -1,7 +1,4 @@
-import re
-
 from lithptypes import *
-
 
 class Builtins(object):
 	def __init__(self):
@@ -75,8 +72,12 @@ class Builtins(object):
 		Args = Args[0]
 		result = Builtins.OpHead(Args)
 		tail = Builtins.OpTail(Args)
+		is_string = isinstance(result, basestring)
 		for value in tail:
-			result += value
+			if is_string or isinstance(value, basestring):
+				result += str(value)
+			else:
+				result += value
 		return result
 
 	@staticmethod
