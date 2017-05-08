@@ -27,7 +27,9 @@ if __name__ == "__main__":
 	])
 	chain.add(fncall)
 	fncall = FunctionCall("print/2", [
-		 FunctionCall("add/2", [Literal("Testing:"),Literal(2), Literal(3)])])
+		 FunctionCall("+/*", [Literal("Testing: "),
+			 FunctionCall("add/2", [Literal(2), Literal(3)])])
+	])
 	chain.add(fncall)
 	interp = Interpreter()
 
