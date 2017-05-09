@@ -7,6 +7,8 @@ class Builtins(object):
 		self.builtin("tail", ["List"], lambda List,Chain,Interp: Builtins.OpTail(List))
 		self.builtin("def", ["Name", "Body"], lambda Args,Chain,Interp: Builtins.OpDef(Args, Chain))
 		self.builtin("get", ["Name"], lambda Args,Chain,Interp: Builtins.OpGet(Args, Chain))
+		self.builtin("set", ["Name", "Value"], lambda Args,Chain,Interp: Builtins.OpSet(Args, Chain))
+		self.builtin("var", ["Name", "Value"], lambda Args,Chain,Interp: Builtins.OpVar(Args, Chain))
 		self.builtin("+/*", [], lambda Args,Chain,Interp: Builtins.OpAdd(Args))
 		self.builtin("-/*", [], lambda Args,Chain,Interp: Builtins.OpSub(Args))
 		self.builtin("*/*", [], lambda Args,Chain,Interp: Builtins.OpMult(Args))
@@ -35,6 +37,26 @@ class Builtins(object):
 		if value == Missing:
 			raise NameError()
 		return value
+
+	@staticmethod
+	def OpSet(Args, chain):
+		[Name, Value] = Args
+		if isinstance(Name, VariableReference):
+			Name = Name.name
+		if isinstance(Name, Atom):
+			Name = Name.name
+		chain.closure.set(Name, Value)
+		return Value
+
+	@staticmethod
+	def OpVar(Args, chain):
+		[Name, Value] = Args
+		if isinstance(Name, VariableReference):
+			Name = Name.name
+		if isinstance(Name, Atom):
+			Name = Name.name
+		chain.closure.set_immediate(Name, Value)
+		return Value
 
 	@staticmethod
 	def OpDef(Args, chain):

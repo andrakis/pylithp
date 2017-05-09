@@ -21,6 +21,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="astparser.py" />
     <Compile Include="builtins.py" />
     <Compile Include="excepts.py" />
     <Compile Include="interpreter.py" />

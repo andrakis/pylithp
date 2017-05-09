@@ -16,6 +16,7 @@ if __name__ == "__main__":
 	t1 = time.time()
 	print "Standard library loaded in ", t1 - t0
 
+	# (def add #A,B :: ((+ A B))
 	fndef = FunctionDefinition(["A", "B"], OpChain(None, [
 		FunctionCall("+/*", [
 			FunctionCall("get/1", "A"),
@@ -26,9 +27,25 @@ if __name__ == "__main__":
 		Atom.Get("add"), fndef
 	])
 	chain.add(fncall)
+
+	# (var A 2)
+	fncall = FunctionCall("var/2", [VariableReference("A"), Literal(2)])
+	chain.add(fncall)
+
+	# (var B 3)
+	fncall = FunctionCall("var/2", [VariableReference("B"), Literal(3)])
+	chain.add(fncall)
+
 	fncall = FunctionCall("print/2", [
-		 FunctionCall("+/*", [Literal("Testing: "),
-			 FunctionCall("add/2", [Literal(2), Literal(3)])])
+		 FunctionCall("+/*", [
+			 Literal("Testing "), FunctionCall("get/1", [VariableReference("A")]),
+			 Literal(" + "), FunctionCall("get/1", [VariableReference("B")]),
+			 Literal(": "),
+			 FunctionCall("add/2", [
+				FunctionCall("get/1", [VariableReference("A")]),
+				FunctionCall("get/1", [VariableReference("B")])
+			])
+		])
 	])
 	chain.add(fncall)
 	interp = Interpreter()

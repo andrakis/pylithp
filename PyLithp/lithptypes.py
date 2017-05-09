@@ -102,6 +102,8 @@ class Literal(LithpOpChainMember):
 _atoms_dict = {}
 _atoms_counter = 0
 
+_atoms_dict["none"] = _atoms_dict["nil"] = None
+
 class Atom(LithpOpChainMember):
 	def __init__(self, name):
 		global _atoms_counter
@@ -120,6 +122,9 @@ class Atom(LithpOpChainMember):
 	def __str__(self):
 		return "'" + self.name + "'"
 
+	def __repr__(self):
+		return self.__str__()
+
 def getAtom(name):
 	global _atoms_dict
 	if name not in _atoms_dict:
@@ -128,7 +133,7 @@ def getAtom(name):
 		_atoms_dict[a.id] = a
 	return _atoms_dict[name]
 
-Atom.Nil = Atom.Get("nil")
+Atom.Nil = None
 Atom.True = Atom.Get("true")
 Atom.False = Atom.Get("false")
 Atom.Missing = Atom.Get("missing")
@@ -139,6 +144,12 @@ class VariableReference(LithpOpChainMember):
 	def __init__(self, name):
 		self.name = name
 
+	def __str__(self):
+		return self.name
+
+	def __repr__(self):
+		return self.__str__()
+
 class FunctionDefinition(LithpOpChainMember):
 	def __init__(self, args, body):
 		self.args = args
@@ -146,6 +157,20 @@ class FunctionDefinition(LithpOpChainMember):
 		self.arity = "?"
 		self.readable_name = "?"
 		self.scoped = False
+
+	def __str__(self):
+		result = "FnDef("
+		first = True
+		for name in self.args:
+			if first == True:
+				first = False
+			else:
+				result += ", "
+			result += name
+		return result + ")"
+
+	def __repr__(self):
+		return self.__str__()
 
 class FunctionDefinitionNative(LithpOpChainMember):
 	def __init__(self, name, args, body):
