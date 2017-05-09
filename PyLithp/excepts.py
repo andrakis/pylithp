@@ -16,3 +16,7 @@ class InvalidEscapeCharacter(LithpError):
 	def __init__(self, c):
 		super(LithpError, self).__init__("Function not found: " + c)
 		self.c = c
+
+class InvalidArguemntError(LithpError):
+	def __init__(self, arg = None):
+		super(LithpError, self).__init__("Invalid argument")

@@ -151,26 +151,22 @@ class VariableReference(LithpOpChainMember):
 		return self.__str__()
 
 class FunctionDefinition(LithpOpChainMember):
-	def __init__(self, args, body):
+	def __init__(self, args, body, scope = None):
 		self.args = args
 		self.body = body
 		self.arity = "?"
 		self.readable_name = "?"
-		self.scoped = False
+		self.scoped = scope != None
+		self.scope = scope
 
 	def __str__(self):
-		result = "FnDef("
-		first = True
-		for name in self.args:
-			if first == True:
-				first = False
-			else:
-				result += ", "
-			result += name
-		return result + ")"
+		return "FnDef(" + ", ".join(self.args) + ")"
 
 	def __repr__(self):
 		return self.__str__()
+
+	def cloneWithScope(self, scope):
+		return FunctionDefinition(self.args, self.body, scope)
 
 class FunctionDefinitionNative(LithpOpChainMember):
 	def __init__(self, name, args, body):

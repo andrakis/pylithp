@@ -3,8 +3,8 @@ from lithptypes import *
 class Builtins(object):
 	def __init__(self):
 		self.builtins = Closure()
-		self.builtin("head", ["List"], lambda List,Chain,Interp: Builtins.OpHead(List))
-		self.builtin("tail", ["List"], lambda List,Chain,Interp: Builtins.OpTail(List))
+		self.builtin("head", ["List"], lambda List,Chain,Interp: Builtins.OpHead([List]))
+		self.builtin("tail", ["List"], lambda List,Chain,Interp: Builtins.OpTail([List]))
 		self.builtin("def", ["Name", "Body"], lambda Args,Chain,Interp: Builtins.OpDef(Args, Chain))
 		self.builtin("get", ["Name"], lambda Args,Chain,Interp: Builtins.OpGet(Args, Chain))
 		self.builtin("set", ["Name", "Value"], lambda Args,Chain,Interp: Builtins.OpSet(Args, Chain))
@@ -14,6 +14,7 @@ class Builtins(object):
 		self.builtin("*/*", [], lambda Args,Chain,Interp: Builtins.OpMult(Args))
 		self.builtin("//*", [], lambda Args,Chain,Interp: Builtins.OpDiv(Args))
 		self.builtin("print/*", [], lambda Args,Chain,Interp: Builtins.OpPrint(Args))
+		self.builtin("scope", ["Target"], lambda Args,Chain,Interp: Builtins.OpScope(Args, LithpOpChainMember))
 
 	def builtin (self,name, params, body):
 		fndef = FunctionDefinitionNative(name, params, body)
@@ -92,8 +93,8 @@ class Builtins(object):
 	@staticmethod
 	def OpAdd(Args):
 		Args = Args[0]
-		result = Builtins.OpHead(Args)
-		tail = Builtins.OpTail(Args)
+		result = Builtins.OpHead([Args])
+		tail = Builtins.OpTail([Args])
 		is_string = isinstance(result, basestring)
 		for value in tail:
 			if is_string or isinstance(value, basestring):
@@ -105,8 +106,8 @@ class Builtins(object):
 	@staticmethod
 	def OpSub(Args):
 		Args = Args[0]
-		result = Builtins.OpHead(Args)
-		tail = Builtins.OpTail(Args)
+		result = Builtins.OpHead([Args])
+		tail = Builtins.OpTail([Args])
 		for value in tail:
 			result -= value
 		return result
@@ -114,8 +115,8 @@ class Builtins(object):
 	@staticmethod
 	def OpMult(Args):
 		Args = Args[0]
-		result = OpHead(Args)
-		tail = OpTail(Args)
+		result = Builtins.OpHead([Args])
+		tail = Builtins.OpTail([Args])
 		for value in tail:
 			result *= value
 		return result
@@ -123,8 +124,8 @@ class Builtins(object):
 	@staticmethod
 	def OpDiv(Args):
 		Args = Args[0]
-		result = Builtins.OpHead(Args)
-		tail = Builtins.OpTail(Args)
+		result = Builtins.OpHead([Args])
+		tail = Builtins.OpTail([Args])
 		for value in tail:
 			result /= value
 		return result
@@ -145,11 +146,20 @@ class Builtins(object):
 	
 	@staticmethod
 	def OpHead(List):
+		[List] = List
 		it = iter(List)
 		return it.next()
 	
 	@staticmethod
 	def OpTail(List):
+		[List] = List
 		it = iter(List)
 		it.next()
 		return list(it)
+
+	@staticmethod
+	def OpScope(Args, Parent):
+		[FnDef] = Args
+		if not instanceof(FnDef, FunctionDefinition):
+			raise InvalidArgumentError(FnDef)
+		return FnDef.cloneWithScope(Parent)
