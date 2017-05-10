@@ -72,6 +72,8 @@ class Builtins(object):
 			realName += "/" + str(len(Body.args))
 		else:
 			Body.arity = realName[-arityIndex:]
+			if Body.arity != "*":
+				Body.arity = int(Body.arity)
 
 		Body.readable_name = realName
 		chain.closure.set_immediate(realName, Body)

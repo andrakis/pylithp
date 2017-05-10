@@ -9,6 +9,7 @@ from interpreter import Interpreter
 import time
 
 if __name__ == "__main__":
+	interp = Interpreter()
 	t0 = time.time()
 	builtins = Builtins()
 	chain = OpChain()
@@ -36,6 +37,7 @@ if __name__ == "__main__":
 	fncall = FunctionCall("var/2", [VariableReference("B"), Literal(3)])
 	chain.add(fncall)
 
+	# (print (+ "Testing " A " + " B ": " (add A B)))
 	fncall = FunctionCall("print/2", [
 		 FunctionCall("+/*", [
 			 Literal("Testing "), FunctionCall("get/1", [VariableReference("A")]),
@@ -48,7 +50,6 @@ if __name__ == "__main__":
 		])
 	])
 	chain.add(fncall)
-	interp = Interpreter()
 
 	t2 = time.time()
 	print "Code compiled in ", t2 - t1
