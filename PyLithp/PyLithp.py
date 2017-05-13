@@ -6,6 +6,7 @@
 from lithptypes  import *
 from builtins    import Builtins
 from interpreter import Interpreter
+from lithpparser import BootstrapParser
 import time
 
 if __name__ == "__main__":
@@ -18,7 +19,7 @@ if __name__ == "__main__":
 	print "Standard library loaded in ", t1 - t0
 
 	# (def add #A,B :: ((+ A B))
-	fndef = FunctionDefinition(["A", "B"], OpChain(None, [
+	fndef = FunctionDefinition(chain, "add/2", ["A", "B"], OpChain(chain, [
 		FunctionCall("+/*", [
 			FunctionCall("get/1", "A"),
 			FunctionCall("get/1", "B")
@@ -54,6 +55,16 @@ if __name__ == "__main__":
 	t2 = time.time()
 	print "Code compiled in ", t2 - t1
 
-	interp.run(chain)
+	#interp.run(chain)
 	t3 = time.time()
 	print "Execution done in ", t3 - t2
+
+	code = '((def add #A,B :: ((+ (get A) (get B)))) (print "Add 5+10: " (add 5 10)))'
+ 	compiled = BootstrapParser(code)
+	builtins.fillClosure(compiled.closure)
+	t4 = time.time()
+	print "Compile done in ", t4 - t3
+
+	interp.run(compiled)
+	t5 = time.time()
+	print "Run complete in ", t5 - t4

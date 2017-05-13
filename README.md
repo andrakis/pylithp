@@ -1,5 +1,22 @@
 # pylithp
-Python version of Lithp, because C++ is too hard
+Python version of Lithp, because C++ is too hard.
+
+This implements a syntax-compatible version of [Lithp](https://github.com/andrakis/node-lithp) in Python.
+
+The benefits of this are:
+
+* Faster execution
+* Greater platform compatibility
+* The large library of Python modules available
+
+# Status
+
+## Version: 0.5
+
+Version 0.5 is now syntax compatible with [node-lithp](https://github.com/andrakis/node-lithp).
+
+It implements the Bootstrap parser and a small subset of the builtin library. The builtin library
+is now the primary focus so that modules work.
 
 ## Working so far
 
@@ -8,9 +25,15 @@ Python version of Lithp, because C++ is too hard
 * User defined functions
 * Debug output
 * Test of user defined function `add`
+* AST parser
+* Bootstrap parser
 
 ## In progress
 
 * Builtin library
-* AST parser
-* Full parser
+
+** modules support
+
+** import/1, export/*, export-global/*
+
+** ability to import python modules

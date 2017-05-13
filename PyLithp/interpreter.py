@@ -17,9 +17,12 @@ class Interpreter:
 
 	def run(self, chain):
 		value = None
-		for op in chain:
+		while 1:
+			op = chain.next()
+			if op == None:
+				break;
 			if isinstance(op, OpChain):
-				value = self.run(OpChain(chain, chain.ops))
+				value = self.run(OpChain(chain, op.ops))
 			elif isinstance(op, FunctionCall):
 				value = self._do_functioncall(chain, op)
 				if(value != None and isinstance(value, OpChain) and value.immediate == True):
@@ -111,7 +114,7 @@ class Interpreter:
 			parent = chain
 			if fndef.scoped == True:
 				parent = fndef.scope
-			call_chain = OpChain(parent, fndef.body)
+			call_chain = OpChain(parent, [fndef.body])
 			if arity == "*":
 				params = [params]
 			for index, name in enumerate(fndef.args):

@@ -24,6 +24,9 @@
     <Compile Include="builtins.py" />
     <Compile Include="excepts.py" />
     <Compile Include="interpreter.py" />
+    <Compile Include="JSIterator.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="lithpparser.py">
       <SubType>Code</SubType>
     </Compile>

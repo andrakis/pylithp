@@ -67,16 +67,36 @@ class Closure(LithpCore):
 		return Builtins.OpDictToString(self.closure)
 
 class OpChain(LithpOpChainMember):
-	def __init__(self, parent = None, ops = []):
+	def __init__(self, parent = None, ops = None):
+		if ops == None:
+			ops = []
 		self.closure = Closure(parent)
 		self.ops = ops
 		self.immediate = False
+		self.pos = -1
+		self.current = None
 	
 	def add(self, op):
+		self.ops.append(op)
+
+	def append(self, op):
 		self.ops.append(op)
 	
 	def __iter__(self):
 		return iter(self.ops)
+
+	def rewind(self):
+		self.pos = -1
+
+	def next(self):
+		self.pos += 1
+		if self.pos >= len(self.ops):
+			return None
+		self.current = self.ops[self.pos]
+		return self.current
+
+	def get(self):
+		return self.current
 
 class FunctionCall(LithpOpChainMember):
 	def __init__(self, fn, params):
@@ -151,9 +171,10 @@ class VariableReference(LithpOpChainMember):
 		return self.__str__()
 
 class FunctionDefinition(LithpOpChainMember):
-	def __init__(self, args, body, scope = None):
+	def __init__(self, parent, name, args, body, scope = None):
 		self.args = args
-		self.body = body
+		self.name = name
+		self.body = OpChain(parent, body.ops)
 		self.arity = "?"
 		self.readable_name = "?"
 		self.scoped = scope != None
@@ -191,5 +212,13 @@ class FunctionDefinitionNative(LithpOpChainMember):
 
 	def __str__(self):
 		return "[FnDef " + self.readable_name + "/" + self.ArityStr() + "]"
+
+class AnonymousFunction(FunctionDefinition):
+	AnonymousFnCounter = 0
+
+	def __init__(self, parent, params, body):
+		AnonymousFunction.AnonymousFnCounter += 1
+		fn_name = "__anonymous" + str(AnonymousFunction.AnonymousFnCounter) + "/" + str(len(params))
+		FunctionDefinition.__init__(self, parent, fn_name, params, body)
 
 from builtins import *
