@@ -55,12 +55,16 @@ if __name__ == "__main__":
 	t2 = time.time()
 	print "Code compiled in ", t2 - t1
 
-	#interp.run(chain)
+	interp.run(chain)
 	t3 = time.time()
 	print "Execution done in ", t3 - t2
 
-	code = '((def add #A,B :: ((+ (get A) (get B)))) (print "Add 5+10: " (add 5 10)))'
- 	compiled = BootstrapParser(code)
+	code = '( \
+		(def add #A,B :: ((+ (get A) (get B)))) \
+		(var A 5) \
+		(var B 10) \
+		(print (+ "Add " A "+" B ": " (add A B))))'
+	compiled = BootstrapParser(code)
 	builtins.fillClosure(compiled.closure)
 	t4 = time.time()
 	print "Compile done in ", t4 - t3

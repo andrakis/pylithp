@@ -519,7 +519,7 @@ class ParserState(object):
 class LithpParser(object):
 	"""Parse Lithp files"""
 
-	EnableParserDebug = True
+	EnableParserDebug = False
 	@staticmethod
 	def Debug(*args):
 		if LithpParser.EnableParserDebug:
