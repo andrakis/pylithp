@@ -22,7 +22,12 @@ if __name__ == "__main__":
 	test_3 = 1 << 2
 	test_4 = 1 << 3
 	test_5 = 1 << 4
-	tests = test_4
+	tests = 0
+	tests |= test_1
+	tests |= test_2
+	tests |= test_3
+	tests |= test_4
+	tests |= test_5
 
 	# (def add #A,B :: ((+ A B))
 	fndef = FunctionDefinition(chain, "add/2", ["A", "B"], OpChain(chain, [
@@ -116,7 +121,7 @@ if __name__ == "__main__":
 				)))) \n\
 			)) \n\
 			(var Test 50) \n\
-			(print "factorial of " Test ": " (fac Test)) \n\
+			(print "Factorial of " Test ": " (fac Test)) \n\
 		 )'
 		compiled = BootstrapParser(code)
 		builtins.fillClosure(compiled.closure)
