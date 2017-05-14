@@ -277,7 +277,11 @@ class ParserState(object):
 			ch = it.next()
 			if ch == None:
 				return ch
+
 			def ignore_line():
+				ch = it.next()
+				if ch == None:
+					return
 				chCode = ord(ch)
 				while chCode != 10:
 					ch = it.next()
@@ -317,6 +321,7 @@ class ParserState(object):
 				while ch == "%":
 					LithpParser.Debug("COMMENT")
 					ignore_line()
+					ch = it.get()
 			return ch
 
 		depth = 1

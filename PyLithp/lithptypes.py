@@ -60,7 +60,7 @@ class Closure(LithpCore):
 		if(self.has_key(key)):
 			return self.closure[key]
 		if self.parent != None:
-			return self.parent.get(key)
+			return self.parent.get_or_missing(key)
 		return Missing
 
 	def __str__(self):

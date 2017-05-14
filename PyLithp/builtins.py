@@ -24,14 +24,44 @@ class Builtins(object):
 		self.builtin("<", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] < Args[1]))
 		self.builtin("<=", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] <= Args[1]))
 		self.builtin("!", ["X"], lambda Args,Chain,Interp: Builtins.Truthy(not Args[0]))
-		self.builtin("?", ["Pred", "X", "Y"], lambda Args,Chain,Interp: \
+		self.builtin("?", ["Pred", "X", "Y"], lambda Args,Chain,Interp:
 			Builtins.Truthy(Args[0] == Atoms.True, Args[1], Args[2]))
 		self.builtin("if/2", ["Test", "Action"], lambda Args,Chain,Interp:
 			self.builtins["if/3"].body([Args[0], Args[1], Builtins.EmptyChain], \
-			Chain, Interp))
+				Chain, Interp))
 		self.builtin("if/3", ["Test", "Action", "Else"], lambda Args,Chain,Interp:
 			Builtins.TestIf(Args[0], Args[1], Args[2]))
 		self.builtin("else", ["Chain"], lambda Args,Chain,Interp: Args[0].call_immediate())
+		self.builtin("while", ["Test", "Action"], lambda Args,Chain,Interp:
+			Builtins.OpWhile(Args[0], Args[1], Chain, Interp))
+		self.builtin("list/*", [], lambda Args,Chain,Interp: Args)
+		self.builtin("map", ["List", "Callback"], lambda Args,Chain,Interp:
+			   Builtins.OpMap(Args[0], Args[1], Chain, Interp))
+		self.builtin("@", ["X", "Y"], lambda Args,Chain,Interp: Args[0] % Args[1])
+		self.builtin("&", ["X", "Y"], lambda Args,Chain,Interp: Args[0] & Args[1])
+		self.builtin("|", ["X", "Y"], lambda Args,Chain,Interp: Args[0] | Args[1])
+		self.builtin("^", ["X", "Y"], lambda Args,Chain,Interp: Args[0] ^ Args[1])
+		self.builtin("<<", ["X", "Y"], lambda Args,Chain,Interp: Args[0] << Args[1])
+		self.builtin(">>", ["X", "Y"], lambda Args,Chain,Interp: Args[0] >> Args[1])
+		self.builtin("split", ["String", "Split"], lambda Args,Chain,Interp:
+			   Args[0].split(Args[1]))
+		self.builtin("repeat", ["String", "Count"], lambda Args,Chain,Interp: Args[0] * Args[1])
+		self.builtin("join", ["List", "JoinChar"], lambda Args,Chain,Interp: Args[1].join(Args[0]))
+		self.builtin("index", ["List", "Index"], lambda Args,Chain,Interp: Args[0][Args[1]])
+		self.builtin("length", ["List"], lambda Args,Chain,Interp: len(Args[0]))
+		self.builtin("parse-int", ["Str"], lambda Args,Chain,Interp: int(Args[0]))
+		self.builtin("parse-float/1", ["Str"], lambda Args,Chain,Interp: float(Args[0]))
+
+	def builtin (self,name, params, body):
+		fndef = FunctionDefinitionNative(name, params, body)
+		self.builtins[fndef.name] = fndef
+
+	def fillClosure(self, closure):
+		for key in self.builtins:
+			closure[key] = self.builtins[key]
+
+	def __str__(self):
+		return str(self.builtins)
 
 	@staticmethod
 	def Truthy(result, X = None, Y = None):
@@ -56,17 +86,6 @@ class Builtins(object):
 			return Builtins.GetIfResult(Action)
 		else:
 			return Builtins.GetIfResult(Else)
-
-	def builtin (self,name, params, body):
-		fndef = FunctionDefinitionNative(name, params, body)
-		self.builtins[fndef.name] = fndef
-
-	def fillClosure(self, closure):
-		for key in self.builtins:
-			closure[key] = self.builtins[key]
-
-	def __str__(self):
-		return str(self.builtins)
 
 	@staticmethod
 	def OpGet(Args, chain):
@@ -119,6 +138,25 @@ class Builtins(object):
 		Body.readable_name = realName
 		chain.closure.set_immediate(realName, Body)
 		return Body
+
+	@staticmethod
+	def OpWhile(Test, Action, Chain, Interp):
+		Test.parent = Chain
+		Test.closure.parent = Chain.closure
+		Action.parent = Chain
+		Action.closure.parent = Chain.closure
+		Test.rewind()
+		Action.rewind()
+		val = None
+		while Interp.run(Test) == Atom.True:
+			Test.rewind()
+			Action.rewind()
+			val = Interp.run(Action)
+		return val
+
+	@staticmethod
+	def OpMap(List, Callback, Chain, Interp):
+		return map(lambda I: Interp.invoke_functioncall(Chain, Callback, [I]))
 	
 	@staticmethod
 	def OpDictToString(d):
