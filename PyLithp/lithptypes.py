@@ -11,9 +11,22 @@ class LithpOpChainMember(LithpCore):
 class Closure(LithpCore):
 	def __init__(self, parent = None):
 		self.closure = {}
-		if type(parent) is OpChain:
+		self.owner = None
+		if isinstance(parent, OpChain):
+			self.owner = parent
 			parent = parent.closure
 		self.parent = parent
+		self.topmost = self
+		if self.parent:
+			self.topmost = self.parent.getTopOwner()
+
+	def getOwner(self):
+		return self.owner
+
+	def getTopOwner(self):
+		if self.parent:
+			return self.parent.getTopOwner()
+		return self
 	
 	def __setitem__(self, key, item):
 		self.do_set(key, item)

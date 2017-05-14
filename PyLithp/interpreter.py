@@ -37,14 +37,25 @@ class Interpreter:
 	
 	def _do_functioncall(self, chain, fn):
 		fn_name = fn.fn
-		# TODO: implement topmost
-		fndef = chain.closure.get_or_missing(fn_name)
+		fndef = chain.closure.topmost.get_or_missing(fn_name)
 		if fndef == Atom.Missing:
-			fn_name = re.sub(r'\d+$', "*", fn_name)
-			fndef = chain.closure.get_or_missing(fn_name)
+			fndef = chain.closure.topmost.get_or_missing(fn_name)
 			if fndef == Atom.Missing:
-				raise FunctionNotFoundError(fn.fn)
-			fn.fn = fn_name
+				fn_name = re.sub(r'\d+$', "*", fn_name)
+				fndef = chain.closure.topmost.get_or_missing(fn_name)
+				if fndef == Atom.Missing:
+					fn_name = fn.fn
+					fndef = chain.closure.get_or_missing(fn_name)
+					if fndef == Atom.Missing:
+						fndef = chain.closure.get_or_missing(fn_name)
+						if fndef == Atom.Missing:
+							fn_name = re.sub(r'\d+$', "*", fn_name)
+							fndef = chain.closure.get_or_missing(fn_name)
+							if fndef == Atom.Missing:
+								raise KeyNotFoundError(fn_name)
+							fn.fn = fn_name
+				else:
+					fn.fn = fn_name
 		params = list(map(lambda p: self.get_param_value(chain, p), fn.params))
 		return self.invoke_functioncall(chain, fndef, params)
 
