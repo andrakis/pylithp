@@ -105,8 +105,6 @@ def GET_EX(n):
 			parts.append(k)
 	return " | ".join(parts)
 
-characters = 0
-
 class ParserState(object):
 	def __init__(self, parent = None):
 		self.ops = [[]]
@@ -283,7 +281,7 @@ class ParserState(object):
 				chCode = ord(ch)
 				while chCode != 10:
 					ch = it.next()
-					characters += 1
+					LithpParser.characters += 1
 					if ch == None:
 						return ch
 					chCode = ord(ch)
@@ -306,6 +304,11 @@ class ParserState(object):
 			self.character += 1
 			if ch == None:
 				return ch
+
+			chCode = ord(ch)
+			if chCode == 10:
+				self.line += 1
+				self.character = 1
 
 			if ch == "%" and not (self.expect & EX_STRING_CHARACTER):
 				# Command and not in speech, ignore this line
@@ -416,7 +419,7 @@ class ParserState(object):
 					self.current_word += ch
 					if len(self.current_word) > 0:
 						target.append(self.current_word)
-					self.expect = EX_PARAM_SEPARATOR | EX_OPCHAIN
+					self.expect = EX_PARAM_SEPARATOR | EX_OPCHAIN_END
 					self.current_word = ""
 					self.current_word = ""
 					self.quote_type = None
@@ -432,7 +435,7 @@ class ParserState(object):
 					self.current_word += ch
 					if len(self.current_word) > 0:
 						target.append(self.current_word)
-					self.expect = EX_PARAM_SEPARATOR | EX_OPCHAIN
+					self.expect = EX_PARAM_SEPARATOR | EX_OPCHAIN_END
 					self.current_word = ""
 					self.quote_type = None
 			elif cls & EX_STRING_CHARACTER and expect & EX_STRING_CHARACTER:

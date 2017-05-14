@@ -5,7 +5,7 @@ class Interpreter:
 
 	MaxDebugLen = 100
 	MaxDebugArrayLen = 20
-	Debug = True
+	Debug = False
 	DebugBuiltins = [
 		"while", "call", "try", "eval", "apply", "next", "recurse"
 	]
@@ -110,7 +110,8 @@ class Interpreter:
 				params = [params]
 			val = fndef.body(params, chain, self)
 		elif isinstance(fndef, FunctionDefinition):
-			print debug_str
+			if Interpreter.Debug:
+				print debug_str
 			parent = chain
 			if fndef.scoped == True:
 				parent = fndef.scope

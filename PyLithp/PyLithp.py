@@ -72,3 +72,24 @@ if __name__ == "__main__":
 	interp.run(compiled)
 	t5 = time.time()
 	print "Run complete in ", t5 - t4
+
+	code = '( \
+		(def is_zero #N :: ((== 0 N))) \n\
+			(def test #N :: ( \n\
+				(if (is_zero N) ( \n\
+					(print "N is zero") \n\
+				) (else ( \n\
+					(print "N is not zero, it is: " N) \n\
+				))) \n\
+			)) \n\
+		(test 1) \n\
+		(test 0) \n\
+	)'
+	compiled = BootstrapParser(code)
+	builtins.fillClosure(compiled.closure)
+	t6 = time.time()
+	print "Compiled in ", t6 - t5
+
+	interp.run(compiled)
+	t7 = time.time()
+	print "Run complete in ", t7 - t6

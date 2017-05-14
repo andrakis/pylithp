@@ -27,13 +27,14 @@ is now the primary focus so that modules work.
 * Test of user defined function `add`
 * AST parser
 * Bootstrap parser
+* if/2, if/3, else/1, comparison operators
 
 ## In progress
 
 * Builtin library
 
-** modules support
+  * modules support
 
-** import/1, export/*, export-global/*
+  * import/1, export/*, export-global/*
 
-** ability to import python modules
+  * ability to import python modules

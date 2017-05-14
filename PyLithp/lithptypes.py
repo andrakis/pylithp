@@ -75,6 +75,7 @@ class OpChain(LithpOpChainMember):
 		self.immediate = False
 		self.pos = -1
 		self.current = None
+		self.parent = parent
 	
 	def add(self, op):
 		self.ops.append(op)
@@ -97,6 +98,25 @@ class OpChain(LithpOpChainMember):
 
 	def get(self):
 		return self.current
+
+	def _set_variables(self, variables):
+		if variables == None:
+			variables = {}
+		for key in variables:
+			self.closure.set_immediate(key, variables[key])
+
+	def call(self, variables = None):
+		non_imm = OpChain(self.parent, self.ops)
+		non_imm.closure.parent = self.closure
+		non_imm._set_variables(variables)
+		return imm
+
+	def call_immediate(self, variables = None):
+		imm = OpChain(self.parent, self.ops)
+		imm.closure.parent = self.closure
+		imm.immediate = True
+		imm._set_variables(variables)
+		return imm
 
 class FunctionCall(LithpOpChainMember):
 	def __init__(self, fn, params):

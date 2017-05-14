@@ -1,5 +1,7 @@
 from lithptypes import *
 
+EmptyChain = OpChain()
+
 class Builtins(object):
 	def __init__(self):
 		self.builtins = Closure()
@@ -15,6 +17,45 @@ class Builtins(object):
 		self.builtin("//*", [], lambda Args,Chain,Interp: Builtins.OpDiv(Args))
 		self.builtin("print/*", [], lambda Args,Chain,Interp: Builtins.OpPrint(Args))
 		self.builtin("scope", ["Target"], lambda Args,Chain,Interp: Builtins.OpScope(Args, LithpOpChainMember))
+		self.builtin("==", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] == Args[1]))
+		self.builtin("!=", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] != Args[1]))
+		self.builtin(">", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] > Args[1]))
+		self.builtin(">=", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] >= Args[1]))
+		self.builtin("<", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] < Args[1]))
+		self.builtin("<=", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] <= Args[1]))
+		self.builtin("!", ["X"], lambda Args,Chain,Interp: Builtins.Truthy(not Args[0]))
+		self.builtin("?", ["Pred", "X", "Y"], lambda Args,Chain,Interp: \
+			Builtins.Truthy(Args[0] == Atoms.True, Args[1], Args[2]))
+		self.builtin("if/2", ["Test", "Action"], lambda Args,Chain,Interp:
+			self.builtins["if/3"].body([Args[0], Args[1], Builtins.EmptyChain], \
+			Chain, Interp))
+		self.builtin("if/3", ["Test", "Action", "Else"], lambda Args,Chain,Interp:
+			Builtins.TestIf(Args[0], Args[1], Args[2]))
+		self.builtin("else", ["Chain"], lambda Args,Chain,Interp: Args[0].call_immediate())
+
+	@staticmethod
+	def Truthy(result, X = None, Y = None):
+		if X == None:
+			X = Atom.True
+		if Y == None:
+			Y = Atom.False
+		if result:
+			return X
+		else:
+			return Y
+
+	@staticmethod
+	def GetIfResult(value):
+		if isinstance(value, OpChain):
+			return value.call_immediate()
+		return value
+
+	@staticmethod
+	def TestIf(Test, Action, Else):
+		if Test == Atom.True:
+			return Builtins.GetIfResult(Action)
+		else:
+			return Builtins.GetIfResult(Else)
 
 	def builtin (self,name, params, body):
 		fndef = FunctionDefinitionNative(name, params, body)
