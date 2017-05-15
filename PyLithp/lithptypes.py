@@ -89,6 +89,7 @@ class OpChain(LithpOpChainMember):
 		self.pos = -1
 		self.current = None
 		self.parent = parent
+		self.function_entry = None
 	
 	def add(self, op):
 		self.ops.append(op)
@@ -203,13 +204,31 @@ class VariableReference(LithpOpChainMember):
 	def __repr__(self):
 		return self.__str__()
 
-class FunctionDefinition(LithpOpChainMember):
+class FunctionDefinitionBase(LithpOpChainMember):
+	def __init__(self, name, args):
+		readable_name = name
+		match = re.search("^([^A-Z][^\/]*)(?:\\/([0-9]+|\\*))$", name)
+		arity = len(args)
+		if match != None:
+			readable_name = match.group(1)
+			arity = match.group(2)
+			if arity != "*" and arity != None:
+				arity = int(arity)
+		else:
+			readable_name = name
+			name = name + "/" + str(len(args))
+		self.name = name
+		self.args = args
+		self.readable_name = readable_name
+		self.arity = arity
+		self.scoped = False
+
+class FunctionDefinition(FunctionDefinitionBase):
 	def __init__(self, parent, name, args, body, scope = None):
+		FunctionDefinitionBase.__init__(self, name, args)
 		self.args = args
 		self.name = name
 		self.body = OpChain(parent, body.ops)
-		self.arity = "?"
-		self.readable_name = "?"
 		self.scoped = scope != None
 		self.scope = scope
 
@@ -222,23 +241,10 @@ class FunctionDefinition(LithpOpChainMember):
 	def cloneWithScope(self, scope):
 		return FunctionDefinition(self.args, self.body, scope)
 
-class FunctionDefinitionNative(LithpOpChainMember):
+class FunctionDefinitionNative(FunctionDefinitionBase):
 	def __init__(self, name, args, body):
-		readable_name = name
-		match = re.search("^([^A-Z][^\/]*)(?:\\/([0-9]+|\\*))$", name)
-		arity = len(args)
-		if match != None:
-			readable_name = match.group(1)
-			arity = match.group(2)
-			if arity != "*" and arity != None:
-				arity = int(arity)
-		else:
-			name = readable_name = name + "/" + str(len(args))
-		self.name = name
-		self.args = args
+		FunctionDefinitionBase.__init__(self, name, args)
 		self.body = body
-		self.arity = arity
-		self.readable_name = readable_name
 
 	def ArityStr(self):
 		return str(self.arity)

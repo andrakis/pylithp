@@ -23,10 +23,10 @@ if __name__ == "__main__":
 	test_4 = 1 << 3
 	test_5 = 1 << 4
 	tests = 0
-	tests |= test_1
-	tests |= test_2
-	tests |= test_3
-	tests |= test_4
+	#tests |= test_1
+	#tests |= test_2
+	#tests |= test_3
+	#tests |= test_4
 	tests |= test_5
 
 	# (def add #A,B :: ((+ A B))
@@ -128,3 +128,31 @@ if __name__ == "__main__":
 		interp.run(compiled)
 	t8 = time.time()
 	print "8 Run complete in ", t8 - t7
+
+	if tests & test_5:
+		code = '\n\
+			% Sample: recurse\n\
+			%\n\
+			% Purpose: Demonstrate tail recursion via the recurse/* builtin.\n\
+			%\n\
+			%          Note that the stack depth remains constant when run\n\
+			%          with the debug mode flag.\n\
+			(\n\
+				(def fac-recursive #N :: (\n\
+					(def fac-r-inner #N,Acc :: (\n\
+						(if (== 0 N) (\n\
+							(Acc)\n\
+						) (else (\n\
+							(recurse (- N 1) (* N Acc))\n\
+						)))\n\
+					))\n\
+					(fac-r-inner N 1)\n\
+				))\n\
+				\n\
+				(print (fac-recursive 100))\n\
+			)'
+		compiled = BootstrapParser(code)
+		builtins.fillClosure(compiled.closure)
+		interp.run(compiled)
+	t9 = time.time()
+	print "9 Run complete in ", t9 - t8

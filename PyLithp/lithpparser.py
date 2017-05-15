@@ -243,8 +243,8 @@ class ParserState(object):
 			LithpParser.Debug(" PARSE TO OPCHAIN")
 			newChain = OpChain(chain)
 			for i in target:
-				LithpParser.Debug("Member " + str(i) + " of chain: " + str(target[i]))
-				newChain.add(self.mapParam(newChain, i))
+				LithpParser.Debug("Member " + str(i))
+				newChain.add(self.mapParam(i, newChain, eleFirst))
 			return newChain
 		else:
 			raise InvalidArguemntError()

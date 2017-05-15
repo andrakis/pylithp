@@ -104,7 +104,7 @@ class Interpreter:
 		if Interpreter.Debug == True:
 			fn_name = fndef.readable_name
 			if isinstance(fndef, FunctionDefinition):
-				fn_name += "/" + fndef.arity
+				fn_name += "/" + str(fndef.arity)
 			indent = "|"
 			if self.depth < 20:
 				indent = indent * (self.depth + 1)
@@ -115,7 +115,7 @@ class Interpreter:
 		self.depth += 1
 		if isinstance(fndef, FunctionDefinitionNative):
 			if Interpreter.Debug:
-				if any(fndef.readable_name in n for n in Interpreter.DebugBuiltins):
+				if fndef.readable_name in Interpreter.DebugBuiltins:
 					print debug_str
 			if arity == "*":
 				params = [params]
@@ -129,8 +129,10 @@ class Interpreter:
 			call_chain = OpChain(parent, [fndef.body])
 			if arity == "*":
 				params = [params]
+			# Set args in new function closure
 			for index, name in enumerate(fndef.args):
 				call_chain.closure.set_immediate(name, params[index])
+				# Mark it as a function entry
 			call_chain.function_entry = fndef.readable_name
 			val = self.run(call_chain)
 		else:

@@ -1,4 +1,5 @@
 from lithptypes import *
+from excepts import *
 
 EmptyChain = OpChain()
 
@@ -51,6 +52,15 @@ class Builtins(object):
 		self.builtin("length", ["List"], lambda Args,Chain,Interp: len(Args[0]))
 		self.builtin("parse-int", ["Str"], lambda Args,Chain,Interp: int(Args[0]))
 		self.builtin("parse-float/1", ["Str"], lambda Args,Chain,Interp: float(Args[0]))
+		self.builtin("call/*", [], lambda Args,Chain,Interp:
+			   Builtins.OpCall(Args[0], Args[1:], Chain, Interp))
+		self.builtin("apply/*", [], lambda Args,Chain,Interp:
+			   Builtins.OpApply(Args[0], Chain, Interp))
+		self.builtin("catch", ["OpChain"], lambda Args,Chain,Interp: Args[0])
+		self.builtin("throw", ["Message"], lambda Args,Chain,Interp: Builtins.OpThrow(Args[0]))
+		self.builtin("to-string", ["Arg"], lambda Args,Chain,Interp: str(Args[0]))
+		self.builtin("export/*", [], lambda Args,Chain,Interp: Builtins.OpExport(Args[0], Chain, KeyboardInterrupt))
+		self.builtin("recurse/*", [], lambda Args,Chain,Interp: Builtins.OpRecurse(Args[0], Chain))
 
 	def builtin (self,name, params, body):
 		fndef = FunctionDefinitionNative(name, params, body)
@@ -135,7 +145,7 @@ class Builtins(object):
 			if Body.arity != "*":
 				Body.arity = int(Body.arity)
 
-		Body.readable_name = realName
+		Body.readable_name = Name.name
 		chain.closure.set_immediate(realName, Body)
 		return Body
 
@@ -244,3 +254,111 @@ class Builtins(object):
 		if not instanceof(FnDef, FunctionDefinition):
 			raise InvalidArgumentError(FnDef)
 		return FnDef.cloneWithScope(Parent)
+
+	@staticmethod
+	def OpFlatten(List):
+		result = []
+		nodes = List
+		if len(List) == 0:
+			return result
+
+		node = nodes.pop()
+
+		while 1:
+			if isinstance(node, list):
+				nodes.append(node)
+			else:
+				result.push(node)
+			if len(nodes) > 0:
+				node = nodes.pop()
+			else:
+				break
+
+		result.reverse()
+		return result
+
+	@staticmethod
+	def OpCall(Fn, Args, Chain, Interp):
+		val = None
+		if callable(Fn):
+			val = Fn(Args, Chain, Interp)
+		else:
+			if isinstance(Fn, Atom):
+				Fn = Fn.name
+			if isinstance(Fn, basestring):
+				fndef = Chain.closure.get_or_missing(Fn)
+				if fnDef == Atom.Missing:
+					fndef = Chain.closure.get_or_missing(Fn + "/*")
+					if fndef == Atom.Missing:
+						raise KeyNotFoundError(fndef)
+					Fn = fndef
+			val = Interp.invoke_functioncall(Chain, Fn, Params)
+		return val
+
+	@staticmethod
+	def OpApply(Params, Chain, Interp):
+		return Builtins.OpCall(Params[0], Params[1:], Chain, Interp)
+
+	@staticmethod
+	def OpTry(Call, Catch, Chain, Interp):
+		assert isinstance(Chain, OpChain)
+		Call.parent = Chain
+		Call.fillClosure.parent = Chain.closure
+		Call.rewind()
+		try:
+			return Interp.run(Call)
+		except Exception as e:
+			return Interp.invoke_functioncall(Chain, Catch, [e])
+
+	@staticmethod
+	def OpThrow(Message):
+		raise LithpError(Message)
+
+	ExportDestinations = []
+	@staticmethod
+	def OpExport(Names, Chain, Interp):
+		if len(Builtins.ExportDestinations) == 0:
+			Builtins.ExportDestinations = [[Interp, Chain]]
+		# Get current destination
+		destination = ExportDestinations[:-1]
+		[dest_lithp, dest_chain] = destination
+		top_chain = dest_chain.getTopParent()
+		fndefs = Builtins.exportFunctions(Interp, Names, Chain, top_chain)
+		top_chain.importClosure(fndefs)
+		return None
+
+	@staticmethod
+	def exportFunctions(Interp, Names, Chain, Top):
+		True
+
+	@staticmethod
+	def OpRecurse(Params, Chain):
+		assert isinstance(Chain, OpChain)
+		target = Chain.parent
+		assert isinstance(target, OpChain)
+
+		while target != None and not target.function_entry:
+			target = target.parent
+		if target == None:
+			raise KeyNotFoundError()
+
+		target.rewind()
+
+		# Get the OpChain function name with arity
+		fn = target.function_entry
+		fnAndArity = fn + "/" + str(len(Params))
+		fndef = target.closure.get_or_missing(fnAndArity)
+		if fndef == Atom.Missing:
+			fnAndArity = re.sub(r'\d+$/', "*", fnAndArity)
+			fndef = target.closure.get_or_missing(fnAndArity)
+			if fndef == Atom.Missing:
+				raise RuntimeError("Unknown function: " + fnAndArity)
+
+		assert isinstance(fndef, FunctionDefinitionBase)
+		for index, name in enumerate(fndef.args):
+			target.closure.set_immediate(name, Params[index])
+
+		# Nothing is returned, it's up to the given function to eventually stop recursion
+		# and return a value.
+
+from interpreter import Interpreter

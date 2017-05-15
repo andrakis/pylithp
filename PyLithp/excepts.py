@@ -20,3 +20,7 @@ class InvalidEscapeCharacter(LithpError):
 class InvalidArguemntError(LithpError):
 	def __init__(self, arg = None):
 		super(LithpError, self).__init__("Invalid argument")
+
+class RuntimeError(LithpError):
+	def __init__(self, error = "Unknown"):
+		super(LithpError, self).__init__(error)
