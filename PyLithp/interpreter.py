@@ -1,5 +1,6 @@
 import re
 from lithptypes import *
+from lithpconstants import LithpConstants
 
 class Interpreter:
 
@@ -41,7 +42,7 @@ class Interpreter:
 		if fndef == Atom.Missing:
 			fndef = chain.closure.topmost.get_or_missing(fn_name)
 			if fndef == Atom.Missing:
-				fn_name = re.sub(r'\d+$', "*", fn_name)
+				fn_name = re.sub(LithpConstants.ReplaceNumberAtEnd, "*", fn_name)
 				fndef = chain.closure.topmost.get_or_missing(fn_name)
 				if fndef == Atom.Missing:
 					fn_name = fn.fn
@@ -49,7 +50,7 @@ class Interpreter:
 					if fndef == Atom.Missing:
 						fndef = chain.closure.get_or_missing(fn_name)
 						if fndef == Atom.Missing:
-							fn_name = re.sub(r'\d+$', "*", fn_name)
+							fn_name = re.sub(LithpConstants.ReplaceNumberAtEnd, "*", fn_name)
 							fndef = chain.closure.get_or_missing(fn_name)
 							if fndef == Atom.Missing:
 								raise KeyNotFoundError(fn_name)
@@ -92,7 +93,7 @@ class Interpreter:
 	def Invoke(self, fn_name, params):
 		fndef = chain.closure.get_or_missing(fn_name)
 		if fndef == Atom.Missing:
-			fn_name = re.sub(r'\d+$', "*", fn_name)
+			fn_name = re.sub(LithpConstants.ReplaceNumberAtEnd, "*", fn_name)
 			fndef = chain.closure.get_or_missing(fn_name)
 			if fndef == Atom.Missing:
 				raise FunctionNotFoundError(fn_name)

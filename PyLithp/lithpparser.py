@@ -6,6 +6,7 @@ import time
 from lithptypes import *
 from excepts import *
 from JSIterator import JSListIterator
+from lithpconstants import LithpConstants
 
 ArityBuiltins = {
 	"print": "*",
@@ -85,7 +86,7 @@ for k in keys:
 	EX_TABLE[EX_TABLE[k]] = k
 
 def parseString(s):
-	match = re.match(r'(.*?)(\\.)', s)
+	match = re.match(LithpConstants.ParseStringEscape, s)
 	if match != None:
 		pre    = match.group(1)
 		symbol = match.group(2)[1:]
@@ -176,17 +177,17 @@ class ParserState(object):
 		elif char == ":":
 			result = EX_FUNCTION_BODY
 		else:
-			if re.match(r'^[a-z][a-zA-Z0-9_]*$', phrase) != None:
+			if re.match(LithpConstants.ClassifyAtom, phrase) != None:
 				result = EX_ATOM
-			elif re.match(r'^[A-Z][A-Za-z0-9_]*$', phrase) != None:
+			elif re.match(LithpConstants.ClassifyVariable, phrase) != None:
 				result = EX_VARIABLE | EX_FUNCTION_PARAM
-			elif re.match(r'^-?[0-9e][0-9e]*$', phrase) != None:
+			elif re.match(LithpConstants.ClassifyNumberInteger, phrase) != None:
 				result = EX_NUMBER | EX_ATOM | EX_NUMBER
-			elif re.match(r'^-?[0-9e][0-9e.]*$', phrase) != None:
+			elif re.match(LithpConstants.ClassifyNumberFloat, phrase) != None:
 				result = EX_NUMBER | EX_ATOM | EX_NUMBER
-			elif len(phrase) > 1 and re.match(r'^\".*\"$', phrase) != None:
+			elif len(phrase) > 1 and re.match(LithpConstants.ClassifyStringDouble, phrase) != None:
 				result = EX_STRING_DOUBLE
-			elif len(phrase) > 1 and re.match(r"^'.*'$", phrase) != None:
+			elif len(phrase) > 1 and re.match(LithpConstants.ClassifyStringSingle, phrase) != None:
 				result = EX_STRING_SINGLE
 			else:
 				result = EX_ATOM

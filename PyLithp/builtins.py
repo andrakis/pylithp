@@ -1,5 +1,6 @@
 from lithptypes import *
 from excepts import *
+from lithpconstants import LithpConstants
 
 EmptyChain = OpChain()
 
@@ -122,9 +123,7 @@ class Builtins(object):
 	@staticmethod
 	def OpVar(Args, chain):
 		[Name, Value] = Args
-		if isinstance(Name, VariableReference):
-			Name = Name.name
-		if isinstance(Name, Atom):
+		if isinstance(Name, VariableReference) or isinstance(Name, Atom):
 			Name = Name.name
 		chain.closure.set_immediate(Name, Value)
 		return Value
@@ -132,9 +131,7 @@ class Builtins(object):
 	@staticmethod
 	def OpDef(Args, chain):
 		[Name, Body] = Args
-		if isinstance(Name, Atom) == False:
-			raise NotImplementedError()
-		if isinstance(Body, FunctionDefinition) == False:
+		if isinstance(Name, Atom) == False or isinstance(Body, FunctionDefinition) == False:
 			raise NotImplementedError()
 		realName = Name.name
 		arityIndex = realName.find("/")
@@ -349,7 +346,7 @@ class Builtins(object):
 		fnAndArity = fn + "/" + str(len(Params))
 		fndef = target.closure.get_or_missing(fnAndArity)
 		if fndef == Atom.Missing:
-			fnAndArity = re.sub(r'\d+$/', "*", fnAndArity)
+			fnAndArity = re.sub(LithpConstants.ReplaceNumberAtEnd, "*", fnAndArity)
 			fndef = target.closure.get_or_missing(fnAndArity)
 			if fndef == Atom.Missing:
 				raise RuntimeError("Unknown function: " + fnAndArity)

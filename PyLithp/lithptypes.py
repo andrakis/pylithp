@@ -1,6 +1,7 @@
 import re
 
 from excepts import *
+from lithpconstants import LithpConstants
 
 class LithpCore(object):
 	pass
@@ -207,7 +208,7 @@ class VariableReference(LithpOpChainMember):
 class FunctionDefinitionBase(LithpOpChainMember):
 	def __init__(self, name, args):
 		readable_name = name
-		match = re.search("^([^A-Z][^\/]*)(?:\\/([0-9]+|\\*))$", name)
+		match = re.search(LithpConstants.FunctionDefinitionMatch, name)
 		arity = len(args)
 		if match != None:
 			readable_name = match.group(1)
