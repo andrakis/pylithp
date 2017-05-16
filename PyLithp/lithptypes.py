@@ -62,6 +62,21 @@ class Closure(LithpCore):
 
 	def set_immediate(self, key, item):
 		self.closure[key] = item
+
+	def set(self, key, item):
+		if self.try_set(key, item):
+			return
+		if parent != None and parent.try_set(key, item):
+			return
+		self.set_immediate(key, item)
+
+	def try_set(self, key, item):
+		if self.has_key(key):
+			self.set_immediate(key, item)
+			return True
+		if self.parent != None and self.parent.try_set(key, item):
+			return True
+		return False
 	
 	def get(self, key):
 		if(self.has_key(key)):
@@ -194,6 +209,30 @@ Atom.False = Atom.Get("false")
 Atom.Missing = Atom.Get("missing")
 
 Missing = Atom.Missing
+
+class Tuple(LithpOpChainMember):
+	def __init__(self, values):
+		self.values = values
+
+	def __iter__(self):
+		return iter(self.values)
+
+	def __setitem__(self, key, item):
+		self.values[key] = item
+	
+	def __getitem__(self, key):
+		return self.values[key]
+	
+	def __repr__(self):
+		return self.values
+	
+	def __len__(self):
+		return len(self.values)
+
+	def __str__(self):
+		value = "{"
+		value += ", ".join(map(lambda v: str(v), self.values))
+		return value + "}"
 
 class VariableReference(LithpOpChainMember):
 	def __init__(self, name):

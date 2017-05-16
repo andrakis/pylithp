@@ -62,6 +62,13 @@ class Builtins(object):
 		self.builtin("to-string", ["Arg"], lambda Args,Chain,Interp: str(Args[0]))
 		self.builtin("export/*", [], lambda Args,Chain,Interp: Builtins.OpExport(Args[0], Chain, KeyboardInterrupt))
 		self.builtin("recurse/*", [], lambda Args,Chain,Interp: Builtins.OpRecurse(Args[0], Chain))
+		self.builtin("tuple/*", [], lambda Args,Chain,Interp: Tuple(Args[0]))
+		self.builtin("dict/*", [], lambda Args,Chain,Interp: Builtins.OpDict(Args[0]))
+		self.builtin("dict-get", ["Dict", "Key"], lambda Args,Chain,Interp: Builtins.OpDictGet(Args[0], Args[1]))
+		self.builtin("dict-set", ["Dict", "Key", "Value"], lambda Args,Chain,Interp: Builtins.OpDictSet(Args[0], Args[1], Args[2]))
+		self.builtin("dict-present", ["Dict", "Key"], lambda Args,Chain,Interp: Builtins.OpDictPresent(Args[0], Args[1]))
+		self.builtin("dict-remove", ["Dict", "Key"], lambda Args,Chain,Interp: Builtins.OpDictRemove(Args[0], Args[1]))
+		self.builtin("dict-keys", ["Dict"], lambda Args,Chain,Interp: Builtins.OpDictKeys(Args[0]))
 
 	def builtin (self,name, params, body):
 		fndef = FunctionDefinitionNative(name, params, body)
@@ -357,5 +364,41 @@ class Builtins(object):
 
 		# Nothing is returned, it's up to the given function to eventually stop recursion
 		# and return a value.
+
+	@staticmethod
+	def OpDict(values):
+		result = {}
+		for value in values:
+			if not isinstance(value, Tuple):
+				raise InvalidArguemntError()
+			name = value[0]
+			v    = value[1]
+			result[name] = v
+		return result
+
+	@staticmethod
+	def OpDictGet(d, key):
+		return d[key]
+
+	@staticmethod
+	def OpDictSet(d, key, value):
+		d[key] = value
+		return d
+
+	@staticmethod
+	def OpDictPresent(d, key):
+		if key in d.keys():
+			return Atom.True
+		else:
+			return Atom.False
+
+	@staticmethod
+	def OpDictRemove(d, key):
+		del d[key]
+		return d
+
+	@staticmethod
+	def OpDictKeys(d, key):
+		return d.keys()
 
 from interpreter import Interpreter

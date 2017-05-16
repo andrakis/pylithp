@@ -1,0 +1,17 @@
+ (
+	(var FL (dict))
+	% A version of fib/1 that checks the results cache (FL)
+	(def fibFL #N :: (
+		(if (dict-present FL N) (
+			(dict-get FL N)
+		) (else (
+			(var I (fib N))
+			(set FL (dict-set FL N I))
+			(I))
+		))
+	))
+	% And this is the implementation altered to use fibFL lookup.
+	(def fib #N::((if (< N 2) (1) ((+ (fibFL (- N 2)) (fibFL (- N 1)))))))
+
+	(print (fib 10))
+)
