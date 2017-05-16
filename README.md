@@ -5,7 +5,8 @@ This implements a syntax-compatible version of [Lithp](https://github.com/andrak
 
 The benefits of this are:
 
-* Potentially faster execution
+* Faster execution
+  * [PyPy](http://pypy.org/) provides a massive speed improvement over CPython and Node.Js
 * Larger number support
 * Greater platform compatibility
 * The large library of Python modules available
