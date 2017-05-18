@@ -196,11 +196,15 @@ class ParserState(object):
 	
 	def convert(self, chain, curr):
 		assert isinstance(chain, OpChain)
-		assert isinstance(curr, list) or isinstance(curr, dict)
+		# assert isinstance(curr, list) or isinstance(curr, dict)
 		target = curr
+		eleFirst = None
 		if isinstance(target, dict):
 			target = curr["code"]
-		eleFirst = target[0]
+		if isinstance(curr, basestring):
+			eleFirst = curr
+		else:
+			eleFirst = target[0]
 		clsFirst = self.classify(eleFirst)
 		LithpParser.Debug("  First element: ", eleFirst)
 		LithpParser.Debug("     Classified: ", GET_EX(clsFirst))
@@ -215,9 +219,15 @@ class ParserState(object):
 			anon = AnonymousFunction(chain, params, body)
 			LithpParser.Debug("Got body for function: ", body)
 			return anon
-		#elif clsFirst & EX_STRING_SINGLE:
+		elif clsFirst & EX_STRING_SINGLE:
 			# Convert to a (call (get 'FnName') Params)
-		elif clsFirst & EX_ATOM:
+			LithpParser.Debug("STRING_SINGLE, convert to FunctionCall")
+			eleFirst = eleFirst[1:-1]
+			clsFirst = self.classify(eleFirst)
+			LithpParser.Debug("    First element: ", eleFirst)
+			LithpParser.Debug("    Re-Classified: ", GET_EX(clsFirst))
+		# New if section due to possible reclassification
+		if clsFirst & EX_ATOM:
 			# FunctionCall
 			LithpParser.Debug(" PARSE TO FUNCTIONCALL: ", target)
 			params = target[1:]
@@ -293,7 +303,6 @@ class ParserState(object):
 					if chCode == 10:
 						self.character = 1
 						self.line += 1
-				ch = it.next()
 				self.line += 1
 
 			if self.line == 1 and self.character == 1 and ch == "#":
@@ -322,7 +331,7 @@ class ParserState(object):
 				while ch == "%":
 					LithpParser.Debug("COMMENT")
 					ignore_line()
-					ch = it.get()
+					ch = it.next()
 			return ch
 
 		depth = 1

@@ -4,7 +4,7 @@ from interpreter import Interpreter
 from builtins import Builtins
 from lithpparser import BootstrapParser
 
-Interpreter.Debug = True
+Interpreter.Debug = False
 
 f = open(sys.argv[1])
 interp = Interpreter()
@@ -19,4 +19,4 @@ t1 = time.time()
 print "Compiled in", t1 - t0
 interp.run(compiled)
 t2 = time.time()
-print "Run complete in ", t2 - t1
+print interp.functioncalls, "function calls run in ", t2 - t1

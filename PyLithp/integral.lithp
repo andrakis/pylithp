@@ -1,0 +1,101 @@
+% A work-in-progress entry for a Codegolf challenge:
+% http://codegolf.stackexchange.com/questions/53100/integral-triangles-and-integral-medians
+(
+	%% @doc Fold a list left with an initial value and return the final value.
+	%% @param List           list  elements to fold
+	%% @param Current=Initial any  initial value
+	%% @param Callback       #Element,Accumulator::any
+	%% @return Current
+	(def foldl #List,Current,Callback :: (
+		(if (== 0 (length List)) (
+			(Current)
+		) (else (
+			(recurse (tail List) (call Callback (head List) Current) Callback)
+		)))
+	))
+
+	%% @doc Similar to map but always returns nil.
+	%% @param List           list  elements to fold
+	%% @param Current=Initial any  initial value
+	%% @param Callback       #Element,Index::any
+	%% @return nil
+	(def each #List,Callback :: (
+		(each-inner 0 List Callback)
+	))
+
+	(def each-inner #Idx,List,Callback :: (
+		(if (== 0 (length List)) (
+			(atom nil)
+		) (else (
+			(call Callback (head List) Idx)
+			(recurse (+ Idx 1) (tail List) Callback)
+		)))
+	))
+	%% @see seq/3
+	(def seq #N0,N1 :: (
+		(seq N0 N1 (? (< N0 N1) 1 -1))
+	))
+	%% @doc Sequence. Count from N0 to N1.
+	%% @param N0   number  Number to start from
+	%% @param N1   number  Number to count to
+	%% @param Inc  number  Increment per number
+	%% @return list[N0...N1]
+	(def seq #N0,N1,Inc :: (
+		(set L (list))
+		(var N (get N0))
+		(while ((if (>= Inc 1) ((<= N N1)) ((>= N N1)))) (
+			(set L (++ L (list N)))
+			(set N (+ N Inc))
+		))
+		(get L)
+	))
+	(def isSquare #V :: (
+		(var S (parse-int (+ 0.5 (sqrt V))))
+		% (print "isSquare - V:" V " S: " S ", S*S: " (* S S))
+		(== (* S S) V)
+	))
+
+	(var MedianCache (dict))
+	(def isMedian #V :: (
+		(if (dict-present MedianCache V) (
+			(dict-get MedianCache V)
+		) (
+			% (print "isMedian " V ", % 4=" (@ V 4))
+			(var Result (and (== 0 (@ V 4)) (isSquare (round (/ V 4)))))
+			(dict-set MedianCache V Result)
+			(Result)
+		))
+	))
+
+	(def main #N :: (
+		(var NTri 0)
+		(each (seq 1 N) (scope #C :: (
+			(each (seq (round (/ (+ C 1) 2)) C) (scope #B :: (
+				(each (seq (+ (- C B) 1) B) (scope #A :: (
+					% (print "A: " A " B: " B " C: " C)
+					(var Test3 (+ (* A A) (* B B)))
+					(var Test3 (- (* 2 Test3) (* C C)))
+					(if (isMedian Test3) (
+						(set NTri (+ NTri 1))
+					) (
+						(var Test2 (+ (* A A) (* C C)))
+						(var Test2 (- (* 2 Test2) (* B B)))
+						(if (isMedian Test2) (
+							(set NTri (+ NTri 1))
+						) (
+							(var Test1 (+ (* B B) (* C C)))
+							(var Test1 (- (* 2 Test1) (* A A)))
+							(if (isMedian Test1) (
+								(set NTri (+ NTri 1))
+							))
+						))
+					))
+				)))
+			)))
+		)))
+		(NTri)
+	))
+
+	(print (main 20))
+)
+

@@ -66,7 +66,7 @@ class Closure(LithpCore):
 	def set(self, key, item):
 		if self.try_set(key, item):
 			return
-		if parent != None and parent.try_set(key, item):
+		if self.parent != None and self.parent.try_set(key, item):
 			return
 		self.set_immediate(key, item)
 
@@ -204,6 +204,8 @@ class Atom(LithpOpChainMember):
 		return _atoms_dict.items
 
 	def __str__(self):
+		if self.name == None:
+			return "'nil'"
 		return "'" + self.name + "'"
 
 	def __repr__(self):
@@ -282,7 +284,10 @@ class FunctionDefinition(FunctionDefinitionBase):
 		FunctionDefinitionBase.__init__(self, name, args)
 		self.args = args
 		self.name = name
-		self.body = OpChain(parent, body.ops)
+		if parent != None and scope == None:
+			self.body = OpChain(parent, body.ops)
+		else:
+			self.body = body
 		self.scoped = scope != None
 		self.scope = scope
 
@@ -293,7 +298,7 @@ class FunctionDefinition(FunctionDefinitionBase):
 		return self.__str__()
 
 	def cloneWithScope(self, scope):
-		return FunctionDefinition(self.args, self.body, scope)
+		return FunctionDefinition(None, self.name, self.args, self.body, scope)
 
 class FunctionDefinitionNative(FunctionDefinitionBase):
 	def __init__(self, name, args, body):

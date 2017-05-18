@@ -24,18 +24,19 @@ AtomObject = Atom.Get("object")
 class Builtins(object):
 	def __init__(self):
 		self.builtins = Closure()
-		self.builtin("head", ["List"], lambda List,Chain,Interp: Builtins.OpHead([List]))
-		self.builtin("tail", ["List"], lambda List,Chain,Interp: Builtins.OpTail([List]))
+		self.builtin("head", ["List"], lambda List,Chain,Interp: Builtins.OpHead(List[0]))
+		self.builtin("tail", ["List"], lambda List,Chain,Interp: Builtins.OpTail(List[0]))
 		self.builtin("def", ["Name", "Body"], lambda Args,Chain,Interp: Builtins.OpDef(Args, Chain))
 		self.builtin("get", ["Name"], lambda Args,Chain,Interp: Builtins.OpGet(Args, Chain))
 		self.builtin("set", ["Name", "Value"], lambda Args,Chain,Interp: Builtins.OpSet(Args, Chain))
 		self.builtin("var", ["Name", "Value"], lambda Args,Chain,Interp: Builtins.OpVar(Args, Chain))
 		self.builtin("+/*", [], lambda Args,Chain,Interp: Builtins.OpAdd(Args))
+		self.builtin("++/*", [], lambda Args,Chain,Interp: Builtins.OpAdd(Args))
 		self.builtin("-/*", [], lambda Args,Chain,Interp: Builtins.OpSub(Args))
 		self.builtin("*/*", [], lambda Args,Chain,Interp: Builtins.OpMult(Args))
 		self.builtin("//*", [], lambda Args,Chain,Interp: Builtins.OpDiv(Args))
 		self.builtin("print/*", [], lambda Args,Chain,Interp: Builtins.OpPrint(Args))
-		self.builtin("scope", ["Target"], lambda Args,Chain,Interp: Builtins.OpScope(Args, LithpOpChainMember))
+		self.builtin("scope", ["Target"], lambda Args,Chain,Interp: Builtins.OpScope(Args, Chain))
 		self.builtin("==", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] == Args[1]))
 		self.builtin("!=", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] != Args[1]))
 		self.builtin(">", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] > Args[1]))
@@ -43,17 +44,18 @@ class Builtins(object):
 		self.builtin("<", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] < Args[1]))
 		self.builtin("<=", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] <= Args[1]))
 		self.builtin("!", ["X"], lambda Args,Chain,Interp: Builtins.Truthy(not Args[0]))
+		self.builtin("and/*", [], lambda Args,Chain,Interp: Builtins.OpAnd(Args[0]))
+		self.builtin("or/*", [], lambda Args,Chain,Interp: Builtins.OpOr(Args[0]))
 		self.builtin("?", ["Pred", "X", "Y"], lambda Args,Chain,Interp:
-			Builtins.Truthy(Args[0] == Atoms.True, Args[1], Args[2]))
+			Builtins.Truthy(Args[0] == Atom.True, Args[1], Args[2]))
 		self.builtin("if/2", ["Test", "Action"], lambda Args,Chain,Interp:
-			self.builtins["if/3"].body([Args[0], Args[1], Builtins.EmptyChain], \
-				Chain, Interp))
+			self.builtins["if/3"].body([Args[0], Args[1], EmptyChain], Chain, Interp))
 		self.builtin("if/3", ["Test", "Action", "Else"], lambda Args,Chain,Interp:
 			Builtins.TestIf(Args[0], Args[1], Args[2]))
 		self.builtin("else", ["Chain"], lambda Args,Chain,Interp: Args[0].call_immediate())
 		self.builtin("while", ["Test", "Action"], lambda Args,Chain,Interp:
 			Builtins.OpWhile(Args[0], Args[1], Chain, Interp))
-		self.builtin("list/*", [], lambda Args,Chain,Interp: Args)
+		self.builtin("list/*", [], lambda Args,Chain,Interp: Args[0])
 		self.builtin("map", ["List", "Callback"], lambda Args,Chain,Interp:
 			   Builtins.OpMap(Args[0], Args[1], Chain, Interp))
 		self.builtin("@", ["X", "Y"], lambda Args,Chain,Interp: Args[0] % Args[1])
@@ -70,7 +72,7 @@ class Builtins(object):
 		self.builtin("parse-int", ["Str"], lambda Args,Chain,Interp: int(Args[0]))
 		self.builtin("parse-float/1", ["Str"], lambda Args,Chain,Interp: float(Args[0]))
 		self.builtin("call/*", [], lambda Args,Chain,Interp:
-			   Builtins.OpCall(Args[0], Args[1:], Chain, Interp))
+			   Builtins.OpCall(Args[0][0], Args[0][1:], Chain, Interp))
 		self.builtin("apply/*", [], lambda Args,Chain,Interp:
 			   Builtins.OpApply(Args[0], Chain, Interp))
 		self.builtin("catch", ["OpChain"], lambda Args,Chain,Interp: Args[0])
@@ -112,9 +114,12 @@ class Builtins(object):
 		self.builtin("ceil", ["N"], lambda Args,Chain,Interp: math.ceil(Args[0]))
 		self.builtin("rand", [], lambda Args,Chain,Interp: random.random())
 		self.builtin("pi", [], lambda Args,Chain,Interp: math.pi)
+		self.builtin("sqrt", ["N"], lambda Args,Chain,Interp: math.sqrt(Args[0]))
 		self.builtin("regex", ["Regex"], lambda Args,Chain,Interp: re.compile(Args[0]))
 		self.builtin("regex", ["Regex", "Flags"], lambda Args,Chain,Interp:
 			   re.compile(Args[0], Builtins.GetRegexFlags(Args[1])))
+		self.builtin("round", ["Number"], lambda Args,Chain,Interp: round(Args[0]))
+		self.builtin("round", ["Number", "NDigits"], lambda Args,Chain,Interp: round(Args[0], Args[1]))
 
 	@staticmethod
 	def GetRegexFlags(flags):
@@ -251,8 +256,8 @@ class Builtins(object):
 	@staticmethod
 	def OpAdd(Args):
 		Args = Args[0]
-		result = Builtins.OpHead([Args])
-		tail = Builtins.OpTail([Args])
+		result = Builtins.OpHead(Args)
+		tail = Builtins.OpTail(Args)
 		is_string = isinstance(result, basestring)
 		for value in tail:
 			if is_string or isinstance(value, basestring):
@@ -264,8 +269,8 @@ class Builtins(object):
 	@staticmethod
 	def OpSub(Args):
 		Args = Args[0]
-		result = Builtins.OpHead([Args])
-		tail = Builtins.OpTail([Args])
+		result = Builtins.OpHead(Args)
+		tail = Builtins.OpTail(Args)
 		for value in tail:
 			result -= value
 		return result
@@ -273,8 +278,8 @@ class Builtins(object):
 	@staticmethod
 	def OpMult(Args):
 		Args = Args[0]
-		result = Builtins.OpHead([Args])
-		tail = Builtins.OpTail([Args])
+		result = Builtins.OpHead(Args)
+		tail = Builtins.OpTail(Args)
 		for value in tail:
 			result *= value
 		return result
@@ -282,8 +287,8 @@ class Builtins(object):
 	@staticmethod
 	def OpDiv(Args):
 		Args = Args[0]
-		result = Builtins.OpHead([Args])
-		tail = Builtins.OpTail([Args])
+		result = Builtins.OpHead(Args)
+		tail = Builtins.OpTail(Args)
 		for value in tail:
 			result /= value
 		return result
@@ -304,13 +309,11 @@ class Builtins(object):
 	
 	@staticmethod
 	def OpHead(List):
-		[List] = List
 		it = iter(List)
 		return it.next()
 	
 	@staticmethod
 	def OpTail(List):
-		[List] = List
 		it = iter(List)
 		it.next()
 		return list(it)
@@ -318,7 +321,7 @@ class Builtins(object):
 	@staticmethod
 	def OpScope(Args, Parent):
 		[FnDef] = Args
-		if not instanceof(FnDef, FunctionDefinition):
+		if not isinstance(FnDef, FunctionDefinition):
 			raise InvalidArgumentError(FnDef)
 		return FnDef.cloneWithScope(Parent)
 
@@ -359,7 +362,7 @@ class Builtins(object):
 					if fndef == Atom.Missing:
 						raise KeyNotFoundError(fndef)
 					Fn = fndef
-			val = Interp.invoke_functioncall(Chain, Fn, Params)
+			val = Interp.invoke_functioncall(Chain, Fn, Args)
 		return val
 
 	@staticmethod
@@ -432,8 +435,8 @@ class Builtins(object):
 	def OpNext(Args, Chain):
 		assert isinstance(Chain, OpChain)
 
-		fn = Builtins.OpHead(Args)
-		params = Builtins.OpTail(Args)
+		fn = Builtins.OpHead(Args[0])
+		params = Builtins.OpTail(Args[0])
 
 		# Find target - last function entry
 		target = Chain.parent
@@ -591,3 +594,19 @@ class Builtins(object):
 		assert isinstance(interp, Interpreter)
 		return interp.invoke_functioncall(chain, callback, result)
 
+	@staticmethod
+	def OpAnd(Values):
+		for v in Values:
+			if v != Atom.True:
+				return Atom.False
+		return Atom.True
+
+	@staticmethod
+	def OpOr(Values):
+		val = False
+		for v in Values:
+			val = (v == Atom.True) or val
+		if val:
+			return Atom.True
+		else:
+			return Atom.False
