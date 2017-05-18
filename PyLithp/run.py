@@ -1,8 +1,8 @@
 import sys
 import time
-from lithpparser import BootstrapParser
 from interpreter import Interpreter
 from builtins import Builtins
+from lithpparser import BootstrapParser
 
 Interpreter.Debug = True
 

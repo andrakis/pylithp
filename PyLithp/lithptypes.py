@@ -93,7 +93,16 @@ class Closure(LithpCore):
 		return Missing
 
 	def __str__(self):
-		return Builtins.OpDictToString(self.closure)
+		result = "{"
+		first = True
+		for key in self.closure:
+			if first:
+				first = False
+			else:
+				result += ", "
+			result += key + ": " + str(self.closure[key])
+		result += "}"
+		return result
 
 class OpChain(LithpOpChainMember):
 	def __init__(self, parent = None, ops = None):
@@ -147,6 +156,11 @@ class OpChain(LithpOpChainMember):
 		imm.immediate = True
 		imm._set_variables(variables)
 		return imm
+
+	def replaceWith(self, fndef):
+		assert isinstance(fndef, FunctionDefinition)
+		self.ops = fndef.body.ops
+		self.rewind()
 
 class FunctionCall(LithpOpChainMember):
 	def __init__(self, fn, params):
@@ -299,5 +313,3 @@ class AnonymousFunction(FunctionDefinition):
 		AnonymousFunction.AnonymousFnCounter += 1
 		fn_name = "__anonymous" + str(AnonymousFunction.AnonymousFnCounter) + "/" + str(len(params))
 		FunctionDefinition.__init__(self, parent, fn_name, params, body)
-
-from builtins import *

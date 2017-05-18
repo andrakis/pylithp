@@ -536,7 +536,9 @@ class LithpParser(object):
 
 	TimeSpentParsing = 0
 
-def BootstrapParser(code, opts = {}):
+def BootstrapParser(code, opts = None):
+	if opts == None:
+		opts = {}
 	if not "finalize" in opts:
 		opts["finalize"] = True
 	if not "ast" in opts:

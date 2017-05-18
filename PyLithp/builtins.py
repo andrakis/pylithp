@@ -1,8 +1,25 @@
+import math
+import numbers
+import random
+import re
+
 from lithptypes import *
 from excepts import *
 from lithpconstants import LithpConstants
+from interpreter import Interpreter
+from lithpparser import BootstrapParser
 
 EmptyChain = OpChain()
+
+AtomNumber = Atom.Get("number")
+AtomString = Atom.Get("string")
+AtomList   = Atom.Get("list")
+AtomOpChain= Atom.Get("opchain")
+AtomFunctionDefinition = Atom.Get("function")
+AtomTuple  = Atom.Get("tuple")
+AtomAtom   = Atom.Get("atom")
+AtomDict   = Atom.Get("dict")
+AtomObject = Atom.Get("object")
 
 class Builtins(object):
 	def __init__(self):
@@ -49,7 +66,6 @@ class Builtins(object):
 			   Args[0].split(Args[1]))
 		self.builtin("repeat", ["String", "Count"], lambda Args,Chain,Interp: Args[0] * Args[1])
 		self.builtin("join", ["List", "JoinChar"], lambda Args,Chain,Interp: Args[1].join(Args[0]))
-		self.builtin("index", ["List", "Index"], lambda Args,Chain,Interp: Args[0][Args[1]])
 		self.builtin("length", ["List"], lambda Args,Chain,Interp: len(Args[0]))
 		self.builtin("parse-int", ["Str"], lambda Args,Chain,Interp: int(Args[0]))
 		self.builtin("parse-float/1", ["Str"], lambda Args,Chain,Interp: float(Args[0]))
@@ -62,6 +78,7 @@ class Builtins(object):
 		self.builtin("to-string", ["Arg"], lambda Args,Chain,Interp: str(Args[0]))
 		self.builtin("export/*", [], lambda Args,Chain,Interp: Builtins.OpExport(Args[0], Chain, KeyboardInterrupt))
 		self.builtin("recurse/*", [], lambda Args,Chain,Interp: Builtins.OpRecurse(Args[0], Chain))
+		self.builtin("next/*", [], lambda Args,Chain,Interp: Builtins.OpNext(Args, AtomOpChain))
 		self.builtin("tuple/*", [], lambda Args,Chain,Interp: Tuple(Args[0]))
 		self.builtin("dict/*", [], lambda Args,Chain,Interp: Builtins.OpDict(Args[0]))
 		self.builtin("dict-get", ["Dict", "Key"], lambda Args,Chain,Interp: Builtins.OpDictGet(Args[0], Args[1]))
@@ -69,6 +86,52 @@ class Builtins(object):
 		self.builtin("dict-present", ["Dict", "Key"], lambda Args,Chain,Interp: Builtins.OpDictPresent(Args[0], Args[1]))
 		self.builtin("dict-remove", ["Dict", "Key"], lambda Args,Chain,Interp: Builtins.OpDictRemove(Args[0], Args[1]))
 		self.builtin("dict-keys", ["Dict"], lambda Args,Chain,Interp: Builtins.OpDictKeys(Args[0]))
+		self.builtin("typeof", ["Value"], lambda Args,Chain,Interp: Builtins.OpTypeof(Args[0]))
+		self.builtin("function-arity", ["Fn"], lambda Args,Chain,Interp: Builtins.OpFunctionArity(Args[0]))
+		self.builtin("define", ["Name", "Value"], lambda Args,Chain,Interp: Builtins.OpDefine(Args[0], Args[1], Chain))
+		self.builtin("undefine", ["Name"], lambda Args,Chain,Interp: Builtins.OpUndefine(Args[0], Chain))
+		self.builtin("defined", ["Name"], lambda Args,Chain,Interp: Builtins.OpDefined(Args[0], Chain))
+		self.builtin("get-def", ["Name"], lambda Args,Chain,Interp: Builtins.OpGetDef(Args[0], Chain))
+		self.builtin("definitions", [], lambda Args,Chain,Interp: Builtins.GetDefinitionDict(Chain))
+		self.builtin("atom", ["Name"], lambda Args,Chain,Interp: Atom.Get(Args[0]))
+		self.builtin("eval", ["Code"], lambda Args,Chain,Interp: Builtins.OpEval(Args[0], [], Chain, Interp))
+		self.builtin("eval", ["Code", "ParamsDict"], lambda Args,Chain,Interp: Builtins.OpEval(Args[0], Args[1], Chain, Interp))
+		self.builtin("tuple/*", [], lambda Args,Chain,Interp: Tuple(Args))
+		self.builtin("py-bridge", ["FnDef"], lambda Args,Chain,Interp: Builtins.OpPyBridge(Args[0], Chain, Interp))
+		self.builtin("true", [], lambda Args,Chain,Interp: Atom.True)
+		self.builtin("false", [], lambda Args,Chain,Interp: Atom.False)
+		self.builtin("nil", [], lambda Args,Chain,Interp: Atom.Nil)
+		self.builtin("host", [], lambda Args,Chain,Interp: Atom.Get("python"))
+		self.builtin("host-version", [], lambda Args,Chain,Interp: 1)
+		self.builtin("index", ["List", "Index"], lambda Args,Chain,Interp: Args[0][Args[1]])
+		self.builtin("index-set", ["List", "Index", "Value"], lambda Args,Chain,Interp:
+			   Builtins.OpIndexSet(Args[0], Args[1], Args[2]))
+		self.builtin("asc", ["Str"], lambda Args,Chain,Interp: ord(Args[0]))
+		self.builtin("trim", ["Str"], lambda Args,Chain,Interp: Args[0].strip())
+		self.builtin("floor", ["N"], lambda Args,Chain,Interp: math.floor(Args[0]))
+		self.builtin("ceil", ["N"], lambda Args,Chain,Interp: math.ceil(Args[0]))
+		self.builtin("rand", [], lambda Args,Chain,Interp: random.random())
+		self.builtin("pi", [], lambda Args,Chain,Interp: math.pi)
+		self.builtin("regex", ["Regex"], lambda Args,Chain,Interp: re.compile(Args[0]))
+		self.builtin("regex", ["Regex", "Flags"], lambda Args,Chain,Interp:
+			   re.compile(Args[0], Builtins.GetRegexFlags(Args[1])))
+
+	@staticmethod
+	def GetRegexFlags(flags):
+		result = 0
+		for flag in flags:
+			flag = flag.lower()
+			if flag == "i":
+				result |= re.IGNORECASE
+			elif flag == "m":
+				result |= re.MULTILINE
+			elif flag == "l":
+				result |= re.LOCALE
+			elif flag == "s":
+				result |= re.DOTALL
+			elif flag == "u":
+				result |= re.UNICODE
+		return result
 
 	def builtin (self,name, params, body):
 		fndef = FunctionDefinitionNative(name, params, body)
@@ -366,6 +429,36 @@ class Builtins(object):
 		# and return a value.
 
 	@staticmethod
+	def OpNext(Args, Chain):
+		assert isinstance(Chain, OpChain)
+
+		fn = Builtins.OpHead(Args)
+		params = Builtins.OpTail(Args)
+
+		# Find target - last function entry
+		target = Chain.parent
+		while target != None and target.function_entry == None:
+			target = target.parent
+		if target == None:
+			raise InvalidArguemntError()
+
+		fnAndArity = fn + "/" + str(len(params))
+		fndef = target.closure.get_or_missing(fnAndArity)
+		if fndef == Atom.Missing:
+			fnAndArity = re.sub(LithpConstants.ReplaceNumberAtEnd, "*", fnAndArity)
+			fndef = target.closure.get_or_missing(fnAndArity)
+			if fndef == Atom.Missing:
+				raise InvalidArguemntError()
+
+		assert isinstance(fndef, FunctionDefinition)
+		target.replaceWith(fndef)
+		for index, name in enumerate(fndef.args):
+			target.closure.set_immediate(name, params[index])
+
+		# Nothing is returned, it's up to the given function to eventually stop recursion
+		# and return a value.
+
+	@staticmethod
 	def OpDict(values):
 		result = {}
 		for value in values:
@@ -401,4 +494,100 @@ class Builtins(object):
 	def OpDictKeys(d, key):
 		return d.keys()
 
-from interpreter import Interpreter
+	@staticmethod
+	def OpTypeof(value):
+		if isinstance(value, basestring):
+			return AtomString
+		elif isinstance(value, list):
+			return AtomList
+		elif isinstance(value, dict):
+			return AtomDict
+		elif isinstance(value, Tuple):
+			return AtomTuple
+		elif isinstance(value, Atom):
+			return AtomATom
+		elif isinstance(value, numbers.Number):
+			return AtomNumber
+		elif isinstance(value, FunctionDefinition):
+			return AtomFunctionDefinition
+		elif isinstance(value, Literal):
+			return Builtins.OpTypeof(value.value)
+		else:
+			return AtomObject
+
+	@staticmethod
+	def OpFunctionArity(fndef):
+		assert isinstance(fndef, FunctionDefinition)
+		return fndef.arity
+
+	DefinitionDictName = "__definition_dict"
+
+	@staticmethod
+	def GetDefinitionDict(chain):
+		assert isinstance(chain, OpChain)
+		topmost = chain.closure.topmost
+		dict = topmost.get_or_missing(Builtins.DefinitionDictName)
+		if dict == Atom.Missing:
+			dict = {}
+			dict[Builtins.DefinitionDictName] = True
+			topmost.set_immediate(Builtins.DefinitionDictName, dict)
+		return dict
+
+	@staticmethod
+	def OpDefine(name, value, chain):
+		dict = Builtins.GetDefinitionDict(chain)
+		dict[name] = value
+		return value
+
+	@staticmethod
+	def OpUndefine(name, chain):
+		dict = Builtins.GetDefinitionDict(chain)
+		old = dict[name]
+		del dict[name]
+		return old
+
+	@staticmethod
+	def OpDefined(name, chain):
+		dict = Builtins.GetDefinitionDict(chain)
+		if name in dict:
+			return Atom.True
+		return Atom.False
+
+	@staticmethod
+	def OpGetDef(name, chain):
+		dict = Builtins.GetDefinitionDict(chain)
+		if not (name in dict):
+			return Atom.False
+		return dict[name]
+
+	@staticmethod
+	def OpDefinitions(chain):
+		return Builtins.GetDefinitionDict(chain)
+
+	@staticmethod
+	def OpEval(code, params, chain, Interp):
+		builtins = Builtins()
+		compiled = BootstrapParser(code)
+		compiled.parent = chain
+		compiled.closure.parent = chain.closure
+		compiled.closure.topmost = chain.closure.topmost
+		for key in params:
+			compiled.closure.set_immediate(key, params[key])
+		return Interp.run(compiled)
+
+	@staticmethod
+	def OpIndexSet(list, name, value):
+		list[name] = value
+		return list
+
+	@staticmethod
+	def OpPyBridge(callback, chain, interp):
+		assert isinstance(fndef, FunctionDefinition)
+		assert isinstance(chain, OpChain)
+		return lambda *result: Builtins.OpPyBridgeCallback(callback, result, chain, interp)
+
+	@staticmethod
+	def OpPyBridgeCallback(callback, result, chain, interp):
+		assert isinstance(interp, Interpreter)
+		return interp.invoke_functioncall(chain, callback, result)
+
