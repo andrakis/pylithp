@@ -15,7 +15,7 @@
     <InterpreterVersion>2.7</InterpreterVersion>
     <IsWindowsApplication>False</IsWindowsApplication>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>integral.lithp</CommandLineArguments>
+    <CommandLineArguments>test.lithp</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -51,6 +51,7 @@
     <Content Include="../requirements.txt" />
     <Content Include="fib.lithp" />
     <Content Include="integral.lithp" />
+    <Content Include="test.lithp" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="{2af0f10d-7135-4994-9156-5d01c9c11b7e}\2.7" />

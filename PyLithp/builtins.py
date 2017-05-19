@@ -78,7 +78,7 @@ class Builtins(object):
 		self.builtin("catch", ["OpChain"], lambda Args,Chain,Interp: Args[0])
 		self.builtin("throw", ["Message"], lambda Args,Chain,Interp: Builtins.OpThrow(Args[0]))
 		self.builtin("to-string", ["Arg"], lambda Args,Chain,Interp: str(Args[0]))
-		self.builtin("export/*", [], lambda Args,Chain,Interp: Builtins.OpExport(Args[0], Chain, KeyboardInterrupt))
+		self.builtin("export/*", [], lambda Args,Chain,Interp: Builtins.OpExport(Args[0], Chain, Interp))
 		self.builtin("recurse/*", [], lambda Args,Chain,Interp: Builtins.OpRecurse(Args[0], Chain))
 		self.builtin("next/*", [], lambda Args,Chain,Interp: Builtins.OpNext(Args, AtomOpChain))
 		self.builtin("tuple/*", [], lambda Args,Chain,Interp: Tuple(Args[0]))
@@ -120,6 +120,9 @@ class Builtins(object):
 			   re.compile(Args[0], Builtins.GetRegexFlags(Args[1])))
 		self.builtin("round", ["Number"], lambda Args,Chain,Interp: round(Args[0]))
 		self.builtin("round", ["Number", "NDigits"], lambda Args,Chain,Interp: round(Args[0], Args[1]))
+		self.builtin("slice", ["List"], lambda Args,Chain,Interp: Builtins.OpSlice(Args[0], None, None))
+		self.builtin("slice", ["List", "Start"], lambda Args,Chain,Interp: Builtins.OpSlice(Args[0], Args[1], None))
+		self.builtin("slice", ["List", "Start", "End"], lambda Args,Chain,Interp: Builtins.OpSlice(Args[0], Args[1], Args[2]))
 
 	@staticmethod
 	def GetRegexFlags(flags):
@@ -390,16 +393,37 @@ class Builtins(object):
 		if len(Builtins.ExportDestinations) == 0:
 			Builtins.ExportDestinations = [[Interp, Chain]]
 		# Get current destination
-		destination = ExportDestinations[:-1]
+		destination = Builtins.ExportDestinations[-1]
 		[dest_lithp, dest_chain] = destination
 		top_chain = dest_chain.getTopParent()
+		assert isinstance(top_chain, OpChain)
 		fndefs = Builtins.exportFunctions(Interp, Names, Chain, top_chain)
 		top_chain.importClosure(fndefs)
 		return None
 
 	@staticmethod
 	def exportFunctions(Interp, Names, Chain, Top):
-		True
+		assert isinstance(Interp, Interpreter)
+		assert isinstance(Chain, OpChain)
+		assert isinstance(Top, OpChain)
+
+		dest = {}
+		for name in Names:
+			if isinstance(name, Atom):
+				name = name.name
+			result = Chain.closure.get_or_missing(name)
+			if result == Atom.Missing:
+				raise FunctionNotFoundError(name)
+			fndef_named_function = result
+			assert isinstance(fndef_named_function, FunctionDefinition)
+			instance = Interp
+			fndef_bridge = FunctionDefinitionNative(
+				fndef_named_function.name,
+				fndef_named_function.args,
+				lambda Args,Chain,Interp: Interp.invoke_functioncall(Chain, fndef_named_function, Args)
+			)
+			dest[name] = fndef_bridge
+		return dest
 
 	@staticmethod
 	def OpRecurse(Params, Chain):
@@ -610,3 +634,7 @@ class Builtins(object):
 			return Atom.True
 		else:
 			return Atom.False
+
+	@staticmethod
+	def OpSlice(List, Start = None, End = None):
+		return List[Start:End]

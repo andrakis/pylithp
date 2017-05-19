@@ -162,6 +162,15 @@ class OpChain(LithpOpChainMember):
 		self.ops = fndef.body.ops
 		self.rewind()
 
+	def importClosure(self, closure):
+		for name in closure:
+			self.closure.set_immediate(closure[name], closure[name])
+
+	def getTopParent(self):
+		if self.parent != None:
+			return self.parent.getTopParent()
+		return self
+
 class FunctionCall(LithpOpChainMember):
 	def __init__(self, fn, params):
 		self.fn = fn
