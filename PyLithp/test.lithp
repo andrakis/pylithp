@@ -1,4 +1,8 @@
 (
 	(import lib)
 	(print "Add 2+3: " (add 2 3))
+	(print "Sub 2+3: " (sub 2 3))
+
+	(define 'TEST')
+	(import lists)
 )

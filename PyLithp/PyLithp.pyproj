@@ -52,6 +52,7 @@
     <Content Include="fib.lithp" />
     <Content Include="integral.lithp" />
     <Content Include="lib.lithp" />
+    <Content Include="lists.lithp" />
     <Content Include="test.lithp" />
   </ItemGroup>
   <ItemGroup>

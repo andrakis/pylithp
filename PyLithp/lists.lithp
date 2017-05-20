@@ -1,0 +1,290 @@
+% Provide functions working with lists.
+(
+	(define 'NATIVE' true)
+	(if (get-def 'NATIVE') (
+		(print "Using NATIVE lists functions")
+	))
+
+	(if (get-def 'NATIVE') (
+		%% @doc Map a list with a callback.
+		%% @param List     list     elements to map
+		%% @param Callback #V::any  callback function. returns a value
+		%% @return list    List of transformed elements
+		%% @builtin        Builtin for speed reasons.
+		%% @condtional     NATIVE
+		%% @cond-show      Use native function instead of builtin.
+		(def map #List,Callback :: (
+			(map-inner (list) List Callback)
+		))
+	))
+
+	(def map-inner #Acc,List,Callback :: (
+		(if (== 0 (length List)) (
+			(Acc)
+		) (else (
+			(recurse (++ Acc (list (call Callback (head List)))) (tail List) Callback)
+		)))
+	))
+
+	%% @doc Fold a list left with an initial value and return the final value.
+	%% @param List           list  elements to fold
+	%% @param Current=Initial any  initial value
+	%% @param Callback       #Element,Accumulator::any
+	%% @return Current
+	(def foldl #List,Current,Callback :: (
+		(if (== 0 (length List)) (
+			(Current)
+		) (else (
+			(recurse (tail List) (call Callback (head List) Current) Callback)
+		)))
+	))
+
+	%% @doc Similar to map but always returns nil.
+	%% @param List           list  elements to fold
+	%% @param Current=Initial any  initial value
+	%% @param Callback       #Element,Index::any
+	%% @return nil
+	(def each #List,Callback :: (
+		(each-inner 0 List Callback)
+	))
+
+	(def each-inner #Idx,List,Callback :: (
+		(if (== 0 (length List)) (
+			(atom nil)
+		) (else (
+			(call Callback (head List) Idx)
+			(recurse (+ Idx 1) (tail List) Callback)
+		)))
+	))
+
+	% Alias
+	%% @see each/2
+	(def each-idx #List,Callback :: ((each List Callback)))
+
+	(export-global each/2 each-idx/2)
+
+	%% @see seq/3
+	(def seq #N0,N1 :: (
+		(seq N0 N1 (? (< N0 N1) 1 -1))
+	))
+
+	%% @doc Sequence. Count from N0 to N1.
+	%% @param N0   number  Number to start from
+	%% @param N1   number  Number to count to
+	%% @param Inc  number  Increment per number
+	%% @return list[N0...N1]
+	(def seq #N0,N1,Inc :: (
+		(set L (list))
+		(var N (get N0))
+		(while ((if (>= Inc 1) ((<= N N1)) ((>= N N1)))) (
+			(set L (++ L (list N)))
+			(set N (+ N Inc))
+		))
+		(get L)
+	))
+
+	(export-global map/2 foldl/3 each/2 seq/2 seq/3)
+
+	(if (get-def 'NATIVE') (
+		(var PermutationsPossibilities (list 0 1 2 6 24 120 720 5040 40320 362880 3628800 39916800 479001600))
+
+		%% @doc Get all permutations of the given List.
+		%% @param List   list  elements for permutations
+		%% @return list  all   permutations for given List
+		% Based on code from: http://stackoverflow.com/questions/9960908/permutations-in-javascript/37580979#37580979
+		% Implements [Heap's method](http://homepage.math.uiowa.edu/~goodman/22m150.dir/2007/Permutation%20Generation%20Methods.pdf)
+		(def permutations #List :: (
+			(var Length (length List))
+			(var Result (list-fill (index PermutationsPossibilities Length) 0))
+			(var C (list-fill Length 0))
+			(var I 1)
+			(var J 1)
+			(index-set Result 0 (slice List))
+			(while ((< I Length)) (
+				(var CI (index C I))
+				(if (< CI I) (
+					(var K (? (@ I 2) (get CI) 0))
+					(var P (index List I))
+					(index-set List I (index List K))
+					(index-set List K P)
+					(index-set C I (+ 1 CI))
+					(set I 1)
+					(index-set Result J (slice List))
+					(set J (+ 1 (get J)))
+				) (else (
+					(index-set C I 0)
+					(set I (+ 1 (get I)))
+				)))
+			))
+			(get Result)
+		))
+		(export-global permutations/1)
+	))
+
+	%% @doc Calculate sum of given list
+	%% @param L=List   list  elements to sum up
+	%% @return number
+	(def sum #L :: ((foldl L 0 #N,A :: ((+ N A)))))
+
+	%% @doc Calculate product of given list
+	%% @param L=List   list  elements to calculate product of
+	%% @return number
+	(def prod #L :: ((foldl L 1 #N,A :: ((* A N)))))
+	(export-global sum/1 prod/1)
+
+	%% @doc Filter a list using a predicate.
+	%% @param List       list        elements
+	%% @param Predicate  #Ele::bool  Predicate function
+	%% @return list
+	(def filter #List,Predicate :: (
+		(filter-inner List Predicate (list))
+	))
+	(def filter-inner #List,Predicate,Acc :: (
+		(if (== 0 (length List)) (
+			(Acc)
+		) (else (
+			(var Ele (head List))
+			(if (call Predicate Ele) (
+				(recurse (tail List) Predicate (++ Acc (list Ele)))
+			) (else (
+				(recurse (tail List) Predicate Acc)
+			)))
+		)))
+	))
+
+	(export-global filter/2)
+
+	%% @doc Get the maximum value from a given list.
+	%%      Handles multiple stack lists.
+	%% @param   List   list[number]  List of numbers. Automatically flattened.
+	%% @return  number               The maximum value found.
+	(def max/* #List :: (
+		(set List (flatten List))
+		(foldl (tail List) (head List) #V,A :: ((? (> V A) V A)))
+	))
+
+	%% @doc Get the minimum value from a given list.
+	%%      Handles multiple stack lists.
+	%% @param   List   list[number]  List of numbers. Automatically flattened.
+	%% @return  number               The minimum value found.
+	(def min/* #List :: (
+		(set List (flatten List))
+		(foldl (tail List) (head List) #V,A :: ((? (< V A) V A)))
+	))
+
+	(export-global min/* max/*)
+
+	(if (get-def 'NATIVE') (
+		%% @doc Perform a flat map of the given List with Callback.
+		%% @param   List      list[E->any]  List of values to map.
+		%% @param   Callback  fun(E)::E     Mapping callback function.
+		%% @return  Flat map of the list.
+		%%
+		%% @example
+		%%
+		%%    (print "Flat map:" (flat-map (list 0 1 2 3 4 5) #X :: (
+		%%        (list X (+ X 1))
+		%%    )))
+		%%
+		%%  Output:
+		%%    Flat map: [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6]
+		%% @end
+		%% @builtin        Moved to builtins for speed reasons
+		%% @conditional    NATIVE
+		%% @cond-show      Use native function instead of builtin.
+		(def flat-map #List,Callback :: (
+			(apply ++ (++ (list) (map List Callback)))
+		))
+		(export flat-map/2)
+	))
+
+	%% @doc List comprehension.
+	%% @param Handler     #/*::*     A function that accepts the same number of arguments
+	%%                               as the number of generators.
+	%% @param Generators  list(list,...)     Generators, ie list of values.
+	%% @param Filter      #/*::bool  A function that accepts the same number of arguments
+	%%                               as the number of generators. Returns boolean.
+	%% @return A new list with comprehended input
+	(def lcomp #Handler,Generators,Filter :: (
+		(lcomp-inner (list) (head Generators) Handler (tail Generators) Filter)
+	))
+
+	%% @see lcomp/3
+	(def lcomp #Handler,Generators :: (
+		(lcomp Handler Generators # :: ((atom true)))
+	))
+
+	%% @private
+	%% @doc Performs the inner list comprehension.
+	%%      If further generators are present, this function is called recursively
+	%%      until no generators are left.
+	%%      At that point, Filter is called and if successful returns Callback of
+	%%      values.
+	(def lcomp-inner #Base,List,Handler,Generators,Filter :: (
+		(flat-map List (scope #Ele :: (
+			(var Current (++ Base (list Ele)))
+			(if (> (length Generators) 0) (
+				(lcomp-inner Current (head Generators) Handler (tail Generators) Filter)
+			) (else (
+				(if (apply Filter Current) (
+					(list (apply Handler Current))
+				) (else (
+					(list)
+				)))
+			)))
+		)))
+	))
+
+	(export-global lcomp/3 lcomp/2)
+
+	(def reverse #L :: ((next reverse L (list))))
+	(def reverse #L,Acc :: (
+		(if (== 0 (length L)) (
+			(Acc)
+		) (else (
+			(recurse (tail L) (++ (list (head L)) Acc))
+		)))
+	))
+
+	(export-global reverse/1)
+
+	(def zip #A,B :: ((zip A B (list))))
+	(def zip #A,B,Acc :: (
+		(if (or (== 0 (length A)) (== 0 (length B))) (
+			(Acc)
+		) (else (
+			(recurse (tail A) (tail B) (++ Acc (list (tuple (head A) (head B)))))
+		)))
+	))
+	(export-global zip/2)
+
+	% Pass -DTEST to livium.lithp to enable.
+	(if (== true (get-def 'TEST')) (
+		(var SampleList (list 1 2 4 8 16 32))
+		(print "Each test: " (each SampleList #N :: ((print N))))
+		(print "Each-idx test: " (each-idx SampleList #N,I :: ((print (++ "" I ": " N)))))
+		(print "Map test: " (map SampleList #N :: ((* N 2))))
+		(print "Foldl test: " (foldl SampleList 0 #N,A :: ((+ N A))))
+		(print "Foldl test: " (foldl SampleList 0 #N,A :: ((<< N A))))
+		(print "Empty map test: " (map (list) #N :: ((* N 2))))
+		(print "Empty foldl test:" (foldl (list) 0 #N,A :: ((+ N A))))
+		(each SampleList #N :: (
+			(print "N:" N)
+		))
+		(print "Seq test:" (seq 1 5))
+		(print "Reverse seq test:" (seq 5 1))
+		(print "Sum test:" (sum SampleList))
+		(print "Prod test:" (prod SampleList))
+		(print "Permutations test: " (permutations (list 1 2 3)))
+		(print "Max test:" (max 10 5 9 4 8 3 6 2 1 0))
+		(print "Min test:" (min 10 5 9 4 8 3 6 2 1 0))
+		(print "Filter test:" (filter (seq 1 10) #V :: (== 0 (@ V 2))))
+		(var Generators (list (seq 1 10) (seq 1 5) (seq 1 3)))
+		(var Handler #X,Y,Z::(list (list X Y Z)))
+		(var Filter #X,Y,Z::((and (== 0 (@ X 2)) (== 0 (@ Y 2)) (== 0 (@ Z 2)))))
+		(print "List comprehension test: " (lcomp Handler Generators Filter))
+		(print "Reverse test: " (reverse SampleList))
+		(print "Zip test: " (zip (list a b c d) (list 1 2 3 4)))
+	))
+
+)

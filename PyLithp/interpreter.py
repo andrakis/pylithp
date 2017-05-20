@@ -75,12 +75,19 @@ class Interpreter:
 		else:
 			return p
 
-	def lithpInspectParser(self, p, join, maxDebug = None):
+	def lithpInspectParser(self, p, join = " ", maxDebug = None):
 		if maxDebug == None:
 			maxDebug = Interpreter.MaxDebugLen
+		value = None
 		if isinstance(p, basestring):
-			return p
-		return str(p)
+			value = '"' + p + '"'
+		elif isinstance(p, list):
+			value = "[" + ", ".join(map(lambda x: self.lithpInspectParser(x, join, maxDebug), p)) + "]"
+		else:
+			value = str(p)
+		if len(value) > maxDebug:
+			return "(too large)"
+		return value
 
 	def inspect_object(self, args, join = " ", maxDebugLen = None):
 		if maxDebugLen == None:

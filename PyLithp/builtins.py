@@ -1,5 +1,7 @@
+import itertools
 import math
 import numbers
+import ctypes
 import random
 import re
 
@@ -35,7 +37,7 @@ class Builtins(object):
 		self.builtin("-/*", [], lambda Args,Chain,Interp: Builtins.OpSub(Args))
 		self.builtin("*/*", [], lambda Args,Chain,Interp: Builtins.OpMult(Args))
 		self.builtin("//*", [], lambda Args,Chain,Interp: Builtins.OpDiv(Args))
-		self.builtin("print/*", [], lambda Args,Chain,Interp: Builtins.OpPrint(Args))
+		self.builtin("print/*", [], lambda Args,Chain,Interp: Builtins.OpPrint(Args, Interp))
 		self.builtin("scope", ["Target"], lambda Args,Chain,Interp: Builtins.OpScope(Args, Chain))
 		self.builtin("==", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] == Args[1]))
 		self.builtin("!=", ["X", "Y"], lambda Args,Chain,Interp: Builtins.Truthy(Args[0] != Args[1]))
@@ -62,8 +64,8 @@ class Builtins(object):
 		self.builtin("&", ["X", "Y"], lambda Args,Chain,Interp: Args[0] & Args[1])
 		self.builtin("|", ["X", "Y"], lambda Args,Chain,Interp: Args[0] | Args[1])
 		self.builtin("^", ["X", "Y"], lambda Args,Chain,Interp: Args[0] ^ Args[1])
-		self.builtin("<<", ["X", "Y"], lambda Args,Chain,Interp: Args[0] << Args[1])
-		self.builtin(">>", ["X", "Y"], lambda Args,Chain,Interp: Args[0] >> Args[1])
+		self.builtin("<<", ["X", "Y"], lambda Args,Chain,Interp: Builtins.OpShiftLeft(Args[0], Args[1]))
+		self.builtin(">>", ["X", "Y"], lambda Args,Chain,Interp: Builtins.OpShiftRight(Args[0], Args[1]))
 		self.builtin("split", ["String", "Split"], lambda Args,Chain,Interp:
 			   Args[0].split(Args[1]))
 		self.builtin("repeat", ["String", "Count"], lambda Args,Chain,Interp: Args[0] * Args[1])
@@ -79,9 +81,12 @@ class Builtins(object):
 		self.builtin("throw", ["Message"], lambda Args,Chain,Interp: Builtins.OpThrow(Args[0]))
 		self.builtin("to-string", ["Arg"], lambda Args,Chain,Interp: str(Args[0]))
 		self.builtin("export/*", [], lambda Args,Chain,Interp: Builtins.OpExport(Args[0], Chain, Interp))
+		# Alias
+		self.builtin("export-global/*", [], lambda Args,Chain,Interp: Builtins.OpExport(Args[0], Chain, Interp))
+		
 		self.builtin("import", ["Path"], lambda Args,Chain,Interp: Builtins.OpImport(Args[0], Chain, Interp))
 		self.builtin("recurse/*", [], lambda Args,Chain,Interp: Builtins.OpRecurse(Args[0], Chain))
-		self.builtin("next/*", [], lambda Args,Chain,Interp: Builtins.OpNext(Args, AtomOpChain))
+		self.builtin("next/*", [], lambda Args,Chain,Interp: Builtins.OpNext(Args, Chain))
 		self.builtin("tuple/*", [], lambda Args,Chain,Interp: Tuple(Args[0]))
 		self.builtin("dict/*", [], lambda Args,Chain,Interp: Builtins.OpDict(Args[0]))
 		self.builtin("dict-get", ["Dict", "Key"], lambda Args,Chain,Interp: Builtins.OpDictGet(Args[0], Args[1]))
@@ -91,6 +96,7 @@ class Builtins(object):
 		self.builtin("dict-keys", ["Dict"], lambda Args,Chain,Interp: Builtins.OpDictKeys(Args[0]))
 		self.builtin("typeof", ["Value"], lambda Args,Chain,Interp: Builtins.OpTypeof(Args[0]))
 		self.builtin("function-arity", ["Fn"], lambda Args,Chain,Interp: Builtins.OpFunctionArity(Args[0]))
+		self.builtin("define", ["Name"], lambda Args,Chain,Interp: Builtins.OpDefine(Args[0], Atom.True, Chain))
 		self.builtin("define", ["Name", "Value"], lambda Args,Chain,Interp: Builtins.OpDefine(Args[0], Args[1], Chain))
 		self.builtin("undefine", ["Name"], lambda Args,Chain,Interp: Builtins.OpUndefine(Args[0], Chain))
 		self.builtin("defined", ["Name"], lambda Args,Chain,Interp: Builtins.OpDefined(Args[0], Chain))
@@ -124,6 +130,8 @@ class Builtins(object):
 		self.builtin("slice", ["List"], lambda Args,Chain,Interp: Builtins.OpSlice(Args[0], None, None))
 		self.builtin("slice", ["List", "Start"], lambda Args,Chain,Interp: Builtins.OpSlice(Args[0], Args[1], None))
 		self.builtin("slice", ["List", "Start", "End"], lambda Args,Chain,Interp: Builtins.OpSlice(Args[0], Args[1], Args[2]))
+		self.builtin("list-fill", ["Length", "Value"], lambda Args,Chain,Interp: [Args[1]] * Args[0])
+		self.builtin("flatten/*", [], lambda Args,Chain,Interp: Builtins.OpFlatten(Args))
 
 	@staticmethod
 	def GetRegexFlags(flags):
@@ -142,7 +150,7 @@ class Builtins(object):
 				result |= re.UNICODE
 		return result
 
-	def builtin (self,name, params, body):
+	def builtin(self,name, params, body):
 		fndef = FunctionDefinitionNative(name, params, body)
 		self.builtins[fndef.name] = fndef
 
@@ -154,7 +162,7 @@ class Builtins(object):
 		return str(self.builtins)
 
 	@staticmethod
-	def Truthy(result, X = None, Y = None):
+	def Truthy(result, X=None, Y=None):
 		if X == None:
 			X = Atom.True
 		if Y == None:
@@ -217,7 +225,7 @@ class Builtins(object):
 		if arityIndex == -1:
 			realName += "/" + str(len(Body.args))
 		else:
-			Body.arity = realName[-arityIndex:]
+			Body.arity = realName[(arityIndex + 1):]
 			if Body.arity != "*":
 				Body.arity = int(Body.arity)
 
@@ -242,7 +250,7 @@ class Builtins(object):
 
 	@staticmethod
 	def OpMap(List, Callback, Chain, Interp):
-		return map(lambda I: Interp.invoke_functioncall(Chain, Callback, [I]))
+		return map(lambda I: Interp.invoke_functioncall(Chain, Callback, [I]), List)
 	
 	@staticmethod
 	def OpDictToString(d):
@@ -298,7 +306,7 @@ class Builtins(object):
 		return result
 
 	@staticmethod
-	def OpPrint(Args):
+	def OpPrint(Args, Interp):
 		Args = Args[0]
 		result = ""
 		first = True
@@ -307,7 +315,10 @@ class Builtins(object):
 				first = False
 			else:
 				result += " "
-			result += str(arg)
+			if isinstance(arg, list):
+				result += "[" + ", ".join(map(lambda x: Interp.lithpInspectParser(x), arg)) + "]"
+			else:
+				result += str(arg)
 		print result
 		return None
 	
@@ -331,25 +342,7 @@ class Builtins(object):
 
 	@staticmethod
 	def OpFlatten(List):
-		result = []
-		nodes = List
-		if len(List) == 0:
-			return result
-
-		node = nodes.pop()
-
-		while 1:
-			if isinstance(node, list):
-				nodes.append(node)
-			else:
-				result.push(node)
-			if len(nodes) > 0:
-				node = nodes.pop()
-			else:
-				break
-
-		result.reverse()
-		return result
+		return list(itertools.chain(*List))
 
 	@staticmethod
 	def OpCall(Fn, Args, Chain, Interp):
@@ -361,7 +354,7 @@ class Builtins(object):
 				Fn = Fn.name
 			if isinstance(Fn, basestring):
 				fndef = Chain.closure.get_or_missing(Fn)
-				if fnDef == Atom.Missing:
+				if fndef == Atom.Missing:
 					fndef = Chain.closure.get_or_missing(Fn + "/*")
 					if fndef == Atom.Missing:
 						raise KeyNotFoundError(fndef)
@@ -371,7 +364,9 @@ class Builtins(object):
 
 	@staticmethod
 	def OpApply(Params, Chain, Interp):
-		return Builtins.OpCall(Params[0], Params[1:], Chain, Interp)
+		fn = Params[0]
+		args = Params[1:][0]
+		return Builtins.OpCall(fn, args, Chain, Interp)
 
 	@staticmethod
 	def OpTry(Call, Catch, Chain, Interp):
@@ -391,22 +386,30 @@ class Builtins(object):
 	ExportDestinations = []
 	@staticmethod
 	def OpExport(Names, Chain, Interp):
+		exportingLocal = False
 		if len(Builtins.ExportDestinations) == 0:
 			Builtins.ExportDestinations = [[Interp, Chain]]
+			exportingLocal = True
 		# Get current destination
 		destination = Builtins.ExportDestinations[-1]
+		fndefs = Builtins.exportFunctions(Interp, Names, Chain)
+		Builtins.ExportToDestination(fndefs, destination)
+		# Also export to current instance
+		if not exportingLocal:
+			Builtins.ExportToDestination(fndefs, [Interp, Chain])
+
+	@staticmethod
+	def ExportToDestination(fndefs, destination):
 		[dest_lithp, dest_chain] = destination
 		top_chain = dest_chain.getTopParent()
 		assert isinstance(top_chain, OpChain)
-		fndefs = Builtins.exportFunctions(Interp, Names, Chain, top_chain)
 		top_chain.importClosure(fndefs)
 		return None
 
 	@staticmethod
-	def exportFunctions(Interp, Names, Chain, Top):
+	def exportFunctions(Interp, Names, Chain):
 		assert isinstance(Interp, Interpreter)
 		assert isinstance(Chain, OpChain)
-		assert isinstance(Top, OpChain)
 
 		dest = {}
 		for name in Names:
@@ -416,15 +419,18 @@ class Builtins(object):
 			if result == Atom.Missing:
 				raise FunctionNotFoundError(name)
 			fndef_named_function = result
-			assert isinstance(fndef_named_function, FunctionDefinition)
-			instance = Interp
-			fndef_bridge = FunctionDefinitionNative(
-				fndef_named_function.name,
+			assert isinstance(fndef_named_function, FunctionDefinitionBase)
+			fndef_bridge = FunctionDefinitionNative(fndef_named_function.name,
 				fndef_named_function.args,
-				lambda Args,Chain,Interp: Interp.invoke_functioncall(Chain, fndef_named_function, Args)
+				Builtins.MakeFnBridge(name, fndef_named_function, Chain, Interp)
 			)
 			dest[name] = fndef_bridge
 		return dest
+
+	@staticmethod
+	def MakeFnBridge(name, fndef, Chain, Interp):
+		return lambda Args,ChainNew,Interp: \
+			Interp.invoke_functioncall(Chain, fndef, Args)
 
 	@staticmethod
 	def FindModule(Path, Chain, Interp):
@@ -504,6 +510,9 @@ class Builtins(object):
 			target = target.parent
 		if target == None:
 			raise InvalidArguemntError()
+
+		if isinstance(fn, Atom):
+			fn = fn.name
 
 		fnAndArity = fn + "/" + str(len(params))
 		fndef = target.closure.get_or_missing(fnAndArity)
@@ -674,3 +683,14 @@ class Builtins(object):
 	@staticmethod
 	def OpSlice(List, Start = None, End = None):
 		return List[Start:End]
+
+	@staticmethod
+	def OpShiftLeft(n, count):
+		nint = ctypes.c_int64(n)
+		countint = ctypes.c_int64(count)
+		return nint.value << countint.value
+
+	def OpShiftRight(n, count):
+		nint = ctypes.c_int64(n)
+		countint = ctypes.c_int64(count)
+		return nint.value >> countint.value
