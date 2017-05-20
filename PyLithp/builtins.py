@@ -79,6 +79,7 @@ class Builtins(object):
 		self.builtin("throw", ["Message"], lambda Args,Chain,Interp: Builtins.OpThrow(Args[0]))
 		self.builtin("to-string", ["Arg"], lambda Args,Chain,Interp: str(Args[0]))
 		self.builtin("export/*", [], lambda Args,Chain,Interp: Builtins.OpExport(Args[0], Chain, Interp))
+		self.builtin("import", ["Path"], lambda Args,Chain,Interp: Builtins.OpImport(Args[0], Chain, Interp))
 		self.builtin("recurse/*", [], lambda Args,Chain,Interp: Builtins.OpRecurse(Args[0], Chain))
 		self.builtin("next/*", [], lambda Args,Chain,Interp: Builtins.OpNext(Args, AtomOpChain))
 		self.builtin("tuple/*", [], lambda Args,Chain,Interp: Tuple(Args[0]))
@@ -425,6 +426,41 @@ class Builtins(object):
 			dest[name] = fndef_bridge
 		return dest
 
+	@staticmethod
+	def FindModule(Path, Chain, Interp):
+		# TODO: Implement
+		return Path + ".lithp"
+
+	@staticmethod
+	def OpImport(Path, Chain, Interp):
+		if isinstance(Path, Atom):
+			Path = Path.name
+		Path = Builtins.FindModule(Path, Chain, Interp)
+		importTable = [] # Defined(Chain, "_modules_imported")
+		Interpreter.DebugMsg("Attempt to import: " + Path)
+		if Path in importTable:
+			Interpreter.DebugMsg("Skipping already imported module")
+			return
+		importTable.append(Path)
+		h = open(Path)
+		code = h.read()
+		AST = False
+		if Path.lower().endswith(".ast"):
+			AST = True
+		opts = {
+			'finalize': True,
+			'ast': AST
+		}
+		compiled = BootstrapParser(code, opts)
+		compiled.parent = Chain
+		compiled.closure.parent = Chain.closure
+		compiled.closure.topmost = Chain.closure.topmost
+		if Builtins.OpDefined("__AST__", Chain) == Atom.True:
+			Builtins.OpDefine("__AST__", Atom.True, compiled)
+		Builtins.ExportDestinations.append([Interp, Chain])
+		Interp.run(compiled)
+		Builtins.ExportDestinations.pop()
+		
 	@staticmethod
 	def OpRecurse(Params, Chain):
 		assert isinstance(Chain, OpChain)

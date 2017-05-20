@@ -1,8 +1,4 @@
 (
-	(print ":)")
-	(def add #A,B :: (
-		(+ A B)
-	))
-
-	(export add/2)
+	(import lib)
+	(print "Add 2+3: " (add 2 3))
 )

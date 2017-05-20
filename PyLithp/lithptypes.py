@@ -164,7 +164,7 @@ class OpChain(LithpOpChainMember):
 
 	def importClosure(self, closure):
 		for name in closure:
-			self.closure.set_immediate(closure[name], closure[name])
+			self.closure.set_immediate(name, closure[name])
 
 	def getTopParent(self):
 		if self.parent != None:

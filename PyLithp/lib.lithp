@@ -1,0 +1,7 @@
+(
+	% Define in a new closure
+	(def add #A,B :: (
+		(+ A B)
+	))
+	(export add/2)
+)

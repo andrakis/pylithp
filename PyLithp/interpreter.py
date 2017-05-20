@@ -11,6 +11,11 @@ class Interpreter:
 		"while", "call", "try", "eval", "apply", "next", "recurse"
 	]
 
+	@staticmethod
+	def DebugMsg(msg):
+		if Interpreter.Debug:
+			print msg
+
 	def __init__(self):
 		self.last_chain = None
 		self.functioncalls = 0

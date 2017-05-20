@@ -51,6 +51,7 @@
     <Content Include="../requirements.txt" />
     <Content Include="fib.lithp" />
     <Content Include="integral.lithp" />
+    <Content Include="lib.lithp" />
     <Content Include="test.lithp" />
   </ItemGroup>
   <ItemGroup>
